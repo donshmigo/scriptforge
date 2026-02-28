@@ -275,11 +275,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       setAnalyzeLoading(false);
       setAnalyzeStatus("");
     }
-  }, [form.apiKey, pendingScripts, next]);
+  }, [pendingScripts, next]);
 
   // ── New creator step 4 (optional analysis before finish) ─────────────────────
   const handleNewStep4Continue = useCallback(async () => {
-    if (pendingScripts.length > 0 && !styleProfile && form.apiKey.trim()) {
+    if (pendingScripts.length > 0 && !styleProfile) {
       // Trigger analysis but don't block — just go to done
       setAnalyzeLoading(true);
       setError("");
@@ -289,7 +289,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             scripts: pendingScripts.map((s) => ({ name: s.name, text: s.text })),
-            apiKey: form.apiKey,
           }),
         });
         const data = await res.json();
@@ -310,7 +309,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       }
     }
     next();
-  }, [pendingScripts, styleProfile, form.apiKey, next]);
+  }, [pendingScripts, styleProfile, next]);
 
   // ── handleComplete ────────────────────────────────────────────────────────────
   const handleComplete = useCallback(() => {
