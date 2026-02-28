@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Try to parse ytInitialData for structured video list
-        const ytDataMatch = vtHtml.match(/var ytInitialData = (\{.+?\});\s*<\/script>/s);
+        const ytDataMatch = vtHtml.match(/var ytInitialData = (\{[\s\S]+?\});\s*<\/script>/);
         if (ytDataMatch?.[1]) {
           try {
             const ytData = JSON.parse(ytDataMatch[1]);
