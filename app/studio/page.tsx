@@ -34,8 +34,6 @@ const REELS_LENGTHS = {
 
 const LS_PROFILE      = "yt_creator_profile";
 const LS_STYLE        = "yt_style_profile";
-const LS_KEY          = "yt_api_key";
-const LS_ANT_KEY      = "yt_anthropic_key";
 const LS_INTRO_GUIDE  = "yt_intro_guide";
 const LS_SCRIPT_GUIDE = "yt_script_guide";
 const LS_PERSONA      = "yt_persona_id";
@@ -141,8 +139,6 @@ export default function Home() {
   const [ready, setReady] = useState(false);
   const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
-  const [apiKey, setApiKey] = useState("");
-  const [anthropicApiKey, setAnthropicApiKey] = useState("");
   const [introGuide, setIntroGuide] = useState("");
   const [scriptGuide, setScriptGuide] = useState("");
   const [personaId, setPersonaId] = useState(DEFAULT_PERSONA_ID);
@@ -175,14 +171,10 @@ export default function Home() {
   useEffect(() => {
     const rawProfile = localStorage.getItem(LS_PROFILE);
     const rawStyle   = localStorage.getItem(LS_STYLE);
-    const rawKey     = localStorage.getItem(LS_KEY);
-    const rawAntKey  = localStorage.getItem(LS_ANT_KEY);
     const rawIntro   = localStorage.getItem(LS_INTRO_GUIDE);
     const rawScript  = localStorage.getItem(LS_SCRIPT_GUIDE);
     if (rawProfile) { try { setCreatorProfile(JSON.parse(rawProfile)); } catch { /* ignore */ } }
     if (rawStyle)   { try { setStyleProfile(JSON.parse(rawStyle)); }   catch { /* ignore */ } }
-    if (rawKey)     setApiKey(rawKey);
-    if (rawAntKey)  setAnthropicApiKey(rawAntKey);
     // Seed with Thomas's guides as defaults if user hasn't uploaded custom ones
     const rawPersona = localStorage.getItem(LS_PERSONA);
     const pid = rawPersona ?? DEFAULT_PERSONA_ID;
@@ -196,19 +188,12 @@ export default function Home() {
   }, []);
 
   const persistAll = useCallback(
-    (profile: CreatorProfile, style: StyleProfile | null, key: string, antKey?: string, iGuide?: string, sGuide?: string) => {
+    (profile: CreatorProfile, style: StyleProfile | null, iGuide?: string, sGuide?: string) => {
       setCreatorProfile(profile);
       setStyleProfile(style);
-      setApiKey(key);
       localStorage.setItem(LS_PROFILE, JSON.stringify(profile));
       if (style) localStorage.setItem(LS_STYLE, JSON.stringify(style));
       else localStorage.removeItem(LS_STYLE);
-      localStorage.setItem(LS_KEY, key);
-      if (antKey !== undefined) {
-        setAnthropicApiKey(antKey);
-        if (antKey) localStorage.setItem(LS_ANT_KEY, antKey);
-        else localStorage.removeItem(LS_ANT_KEY);
-      }
       if (iGuide !== undefined) {
         setIntroGuide(iGuide);
         if (iGuide) localStorage.setItem(LS_INTRO_GUIDE, iGuide);
@@ -235,8 +220,8 @@ export default function Home() {
   }, []);
 
   const handleOnboardingComplete = useCallback(
-    (profile: CreatorProfile, style: StyleProfile | null, key: string) => {
-      persistAll(profile, style, key);
+    (profile: CreatorProfile, style: StyleProfile | null) => {
+      persistAll(profile, style);
     },
     [persistAll]
   );
@@ -261,10 +246,6 @@ export default function Home() {
   }, []);
 
   const handleGenerate = useCallback(async () => {
-    if (!anthropicApiKey.trim() && !apiKey.trim()) {
-      setError("No API key found. Add your Anthropic key in Edit Profile → API Keys.");
-      return;
-    }
     if (!videoTitle.trim()) { setError("Please enter a video title."); return; }
     if (!creatorProfile) { setError("Creator profile not found. Please complete onboarding."); return; }
 
@@ -296,8 +277,6 @@ export default function Home() {
           introGuide,
           scriptGuide,
           personaId,
-          apiKey,
-          anthropicApiKey,
         }),
       });
       const data = await res.json();
@@ -313,7 +292,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [apiKey, anthropicApiKey, platform, reelType, videoTitle, videoIdea, userIntro, referenceInfo, subheadings, scriptLength, styleProfile, creatorProfile, introGuide, scriptGuide, personaId]);
+  }, [platform, reelType, videoTitle, videoIdea, userIntro, referenceInfo, subheadings, scriptLength, styleProfile, creatorProfile, introGuide, scriptGuide, personaId]);
 
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(script);
@@ -578,12 +557,10 @@ export default function Home() {
         <EditProfileModal
           profile={creatorProfile}
           styleProfile={styleProfile}
-          apiKey={apiKey}
-          anthropicApiKey={anthropicApiKey}
           introGuide={introGuide}
           scriptGuide={scriptGuide}
           personaId={personaId}
-          onSave={(p, s, k, antK, iG, sG) => { persistAll(p, s, k, antK, iG, sG); setShowEditProfile(false); }}
+          onSave={(p, s, iG, sG) => { persistAll(p, s, iG, sG); setShowEditProfile(false); }}
           onClose={() => setShowEditProfile(false)}
         />
       )}

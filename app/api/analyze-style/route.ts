@@ -4,23 +4,18 @@ import { withRetry } from "@/lib/openai-retry";
 
 export interface AnalyzeRequest {
   scripts: Array<{ name: string; text: string }>;
-  apiKey: string;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body: AnalyzeRequest = await req.json();
-    const { scripts, apiKey } = body;
-
-    if (!apiKey) {
-      return NextResponse.json({ error: "OpenAI API key is required." }, { status: 400 });
-    }
+    const { scripts } = body;
 
     if (!scripts || scripts.length === 0) {
       return NextResponse.json({ error: "No scripts provided." }, { status: 400 });
     }
 
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     // Cap each transcript at 6,000 words to stay well inside TPM limits.
     // YouTube transcripts can be 4–8k words each; 10 × 8k = ~80k tokens input alone.
