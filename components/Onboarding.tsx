@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { DEFAULT_SAMPLE_SCRIPTS, type SampleScript } from "@/lib/scripts";
 import type { CreatorProfile, StyleProfile, ContentStyle } from "@/lib/types";
+import { PERSONAS, type Persona } from "@/lib/personas";
 
 interface OnboardingProps {
   onComplete: (
@@ -130,6 +131,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [error, setError] = useState("");
+  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(PERSONAS.find(p => p.available) ?? null);
 
   // Channel scrape state
   const [scrapeLoading, setScrapeLoading] = useState(false);
@@ -159,7 +161,23 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const next = useCallback(() => { setError(""); setStep((s) => s + 1); }, []);
   const back = useCallback(() => { setError(""); setStep((s) => Math.max(0, s - 1)); }, []);
 
-  const selectPath = (p: Path) => { setPath(p); setStep(1); };
+  const selectPath = (p: Path) => {
+    setPath(p);
+    // Pre-fill identity from the selected persona
+    if (selectedPersona?.identity) {
+      const id = selectedPersona.identity;
+      setForm((f) => ({
+        ...f,
+        name:             f.name || id.name || "",
+        credibilityStack: id.credibilityStack || f.credibilityStack,
+        uniqueMethod:     id.uniqueMethod     || f.uniqueMethod,
+        contraryBelief:   id.contraryBelief   || f.contraryBelief,
+        targetPerson:     id.targetPerson     || f.targetPerson,
+        contentStyle:     (id.contentStyle as ContentStyle) || f.contentStyle,
+      }));
+    }
+    setStep(1);
+  };
 
   // ── Channel scrape (experienced step 1 → 2) ─────────────────────────────────
   const handleScrapeAndAdvance = useCallback(async () => {
@@ -343,33 +361,102 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   // ── Step renderers ───────────────────────────────────────────────────────────
 
   const renderPathSelect = () => (
-    <div className="flex flex-col items-center text-center gap-8">
-      <div>
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-5" style={{ background: "var(--accent-glow)", border: "1px solid var(--border-light)" }}>▶</div>
+    <div className="flex flex-col gap-8">
+
+      {/* Hero */}
+      <div className="text-center">
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mx-auto mb-4" style={{ background: "var(--accent-glow)", border: "1px solid rgba(124,92,252,0.3)" }}>▶</div>
         <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--foreground)" }}>Welcome to ScriptForge</h1>
-        <p className="text-sm max-w-md leading-6" style={{ color: "var(--muted)" }}>
-          Let's build your creator profile — a one-time setup that makes every script sound unmistakably like you.
+        <p className="text-sm leading-6 max-w-md mx-auto" style={{ color: "var(--muted)" }}>
+          Choose a writing framework, then tell us about yourself — a one-time setup that makes every script sound unmistakably like you.
         </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-xl">
+
+      {/* Persona picker */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-3 text-center" style={{ color: "var(--muted)" }}>Choose a Writing Framework</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {PERSONAS.map((persona) => {
+            const isSelected = selectedPersona?.id === persona.id;
+            return (
+              <button
+                key={persona.id}
+                disabled={!persona.available}
+                onClick={() => persona.available && setSelectedPersona(persona)}
+                className="relative rounded-2xl p-5 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: isSelected ? "var(--accent-glow)" : "var(--surface-2)",
+                  border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                }}
+              >
+                {!persona.available && (
+                  <span className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}>
+                    Soon
+                  </span>
+                )}
+                {isSelected && (
+                  <span className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "var(--accent)", color: "#fff" }}>✓</span>
+                )}
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold mb-3"
+                  style={{ background: persona.color + "22", color: persona.color }}
+                >
+                  {persona.avatar}
+                </div>
+                <p className="text-sm font-semibold mb-0.5" style={{ color: isSelected ? "var(--accent)" : "var(--foreground)" }}>{persona.name}</p>
+                <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>{persona.tagline}</p>
+                {isSelected && (
+                  <p className="text-xs mt-2 leading-4" style={{ color: "var(--accent)", opacity: 0.8 }}>
+                    Identity pre-filled from this framework ↓
+                  </p>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+        <span className="text-xs" style={{ color: "var(--muted)" }}>Now tell us about you</span>
+        <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+      </div>
+
+      {/* Path cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[
-          { p: "experienced" as Path, icon: "🎬", title: "I've made content before", desc: "Upload your existing scripts — AI extracts your voice, style, and positioning automatically" },
-          { p: "new" as Path, icon: "🌱", title: "I'm just starting out", desc: "Answer a few questions and we'll build your authority profile from scratch" },
-        ].map(({ p, icon, title, desc }) => (
+          {
+            p: "experienced" as Path,
+            icon: "🎬",
+            title: "I've made content before",
+            desc: "Upload your existing scripts — AI extracts your voice, style, and positioning automatically",
+            cta: "Get started →",
+          },
+          {
+            p: "new" as Path,
+            icon: "🌱",
+            title: "I'm just starting out",
+            desc: "Answer a few questions and we'll build your authority profile from scratch",
+            cta: "Get started →",
+          },
+        ].map(({ p, icon, title, desc, cta }) => (
           <button
             key={p!}
             onClick={() => selectPath(p)}
-            className="rounded-2xl p-6 text-left transition-all"
-            style={{ background: "var(--surface-2)", border: "1px solid var(--border-light)" }}
+            className="rounded-2xl p-5 text-left transition-all group"
+            style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border-light)")}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
           >
-            <div className="text-3xl mb-3">{icon}</div>
+            <div className="text-2xl mb-3">{icon}</div>
             <p className="text-sm font-semibold mb-1" style={{ color: "var(--foreground)" }}>{title}</p>
-            <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>{desc}</p>
+            <p className="text-xs leading-5 mb-3" style={{ color: "var(--muted)" }}>{desc}</p>
+            <span className="text-xs font-semibold" style={{ color: "var(--accent)" }}>{cta}</span>
           </button>
         ))}
       </div>
+
     </div>
   );
 
