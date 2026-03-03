@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const maxDuration = 300; // Vercel Pro: up to 300s for long AI generation
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { THOMAS_WHO_AM_I } from "@/lib/thomas-guides";
@@ -32,6 +34,8 @@ export interface GenerateRequest {
   introGuide?: string;
   scriptGuide?: string;
   personaId?: string;
+  apiKey: string;
+  anthropicApiKey?: string;
 }
 
 const YOUTUBE_LENGTH_TARGETS: Record<string, { words: string; duration: string; maxTokens: number }> = {
@@ -66,15 +70,21 @@ export async function POST(req: NextRequest) {
       introGuide = "",
       scriptGuide = "",
       personaId = "thomas",
+      apiKey,
+      anthropicApiKey,
     } = body;
 
+    if (!anthropicApiKey && !apiKey) {
+      return NextResponse.json(
+        { error: "An API key is required. Add your Anthropic key in Edit Profile → API Keys." },
+        { status: 400 }
+      );
+    }
     if (!videoTitle) {
       return NextResponse.json({ error: "Video title is required." }, { status: 400 });
     }
 
-    const anthropicApiKey = process.env.ANTHROPIC_API_KEY ?? "";
-    const apiKey = process.env.OPENAI_API_KEY ?? "";
-    const useAnthropic = !!anthropicApiKey.trim();
+    const useAnthropic = !!anthropicApiKey?.trim();
     const isReels = platform === "reels";
     const lengthTable = isReels ? REELS_LENGTH_TARGETS : YOUTUBE_LENGTH_TARGETS;
     const lengthTarget = lengthTable[scriptLength] ?? lengthTable.medium;
@@ -312,7 +322,7 @@ Write the complete script now:`;
       const anthropic = new Anthropic({ apiKey: anthropicApiKey });
       const message = await withRetry(() =>
         anthropic.messages.create({
-          model: "claude-opus-4-6",
+          model: "claude-sonnet-4-6",
           max_tokens: lengthTarget.maxTokens,
           temperature: 0.65,
           system: systemPrompt,

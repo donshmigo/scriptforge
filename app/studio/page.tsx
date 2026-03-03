@@ -220,10 +220,13 @@ export default function Home() {
   }, []);
 
   const handleOnboardingComplete = useCallback(
-    (profile: CreatorProfile, style: StyleProfile | null) => {
+    (profile: CreatorProfile, style: StyleProfile | null, personaId?: string) => {
       persistAll(profile, style);
+      if (personaId) {
+        handlePersonaChange(personaId);
+      }
     },
-    [persistAll]
+    [persistAll, handlePersonaChange]
   );
 
   // Upload reference file for per-video use
@@ -279,13 +282,80 @@ export default function Home() {
           personaId,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Generation failed.");
-      setScript(data.script);
-      if (data.hookAlternatives?.length) {
-        setHookAlternatives(data.hookAlternatives);
-        setSelectedHookIdx(-1);
+
+      // Validation errors return JSON before the stream starts
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Generation failed." }));
+        throw new Error(data.error || "Generation failed.");
       }
+
+      // Read the streaming text response
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let raw = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          // Flush any remaining bytes in the decoder buffer
+          const tail = decoder.decode();
+          if (tail) raw += tail;
+          break;
+        }
+        raw += decoder.decode(value, { stream: true });
+
+        // Show script portion live — strip markers and hook-alternatives block
+        const cleanLive = raw
+          .replace(/\n__STREAM_ERROR__:.*$/s, "")
+          .replace(/\n\n__MAX_TOKENS__.*$/s, "");
+        const delimIdx = cleanLive.indexOf("===HOOK ALTERNATIVES===");
+        setScript(delimIdx !== -1 ? cleanLive.slice(0, delimIdx) : cleanLive);
+      }
+
+      // Check for a mid-stream error marker
+      const errMarker = raw.indexOf("\n__STREAM_ERROR__:");
+      if (errMarker !== -1) {
+        throw new Error(raw.slice(errMarker + "\n__STREAM_ERROR__:".length).trim());
+      }
+
+      // Warn if model was cut off at the token limit
+      const wasTokenCapped = raw.includes("\n\n__MAX_TOKENS__");
+      const rawClean = raw
+        .replace(/\n\n__MAX_TOKENS__/g, "")
+        .replace(/\n__STREAM_ERROR__:.*$/s, "");
+
+      // Parse hook alternatives (Reels only)
+      let rawScript = rawClean;
+      const hookDelim = rawClean.indexOf("===HOOK ALTERNATIVES===");
+      if (hookDelim !== -1) {
+        rawScript = rawClean.slice(0, hookDelim).trim();
+        const altBlock = rawClean.slice(hookDelim + "===HOOK ALTERNATIVES===".length).trim();
+        const alts = altBlock
+          .split("\n")
+          .map((l) => l.replace(/^\d+\.\s*/, "").trim())
+          .filter(Boolean);
+        if (alts.length) {
+          setHookAlternatives(alts);
+          setSelectedHookIdx(-1);
+        }
+      }
+
+      // Apply post-processing cleanup once stream is complete
+      const finalScript = rawScript
+        .replace(/^\/\/\s*Template:.*$/im, "")
+        .replace(/\[(?:PAUSE|BEAT|B-ROLL[^\]]*|CUT TO[^\]]*|EMPHASIS[^\]]*)\]/gi, "")
+        .replace(/\*\*([^*]+)\*\*/g, "**$1**")
+        .replace(/\*([^*]+)\*/g, "$1")
+        .replace(/^#{1,6}\s*(production notes?|director.?s? notes?|filming tips?|editing tips?).*/gim, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+
+      setScript(finalScript);
+
+      if (wasTokenCapped) {
+        setError("⚠️ Script reached the token limit and was cut short. Try switching to a shorter length, or split the topic into two videos.");
+      }
+
       setTimeout(() => outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Something went wrong.");

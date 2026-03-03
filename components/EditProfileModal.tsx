@@ -8,14 +8,16 @@ import { getPersona } from "@/lib/personas";
 interface EditProfileModalProps {
   profile: CreatorProfile;
   styleProfile: StyleProfile | null;
+  apiKey: string;
+  anthropicApiKey?: string;
   introGuide?: string;
   scriptGuide?: string;
   personaId?: string;
-  onSave: (profile: CreatorProfile, styleProfile: StyleProfile | null, introGuide: string, scriptGuide: string) => void;
+  onSave: (profile: CreatorProfile, styleProfile: StyleProfile | null, apiKey: string, anthropicApiKey: string, introGuide: string, scriptGuide: string) => void;
   onClose: () => void;
 }
 
-type Tab = "identity" | "style" | "introguide" | "scriptguide";
+type Tab = "identity" | "style" | "introguide" | "scriptguide" | "apikey";
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -67,6 +69,8 @@ const INPUT_STYLE = {
 export default function EditProfileModal({
   profile,
   styleProfile: initialStyle,
+  apiKey: initialKey,
+  anthropicApiKey: initialAnthropicKey = "",
   introGuide: initialIntroGuide = "",
   scriptGuide: initialScriptGuide = "",
   personaId = "thomas",
@@ -96,6 +100,12 @@ export default function EditProfileModal({
   // Transcript import
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const [transcriptStatus, setTranscriptStatus] = useState("");
+
+  // API key
+  const [apiKey, setApiKey] = useState(initialKey);
+  const [apiKeyVisible, setApiKeyVisible] = useState(false);
+  const [anthropicApiKey, setAnthropicApiKey] = useState(initialAnthropicKey);
+  const [anthropicKeyVisible, setAnthropicKeyVisible] = useState(false);
 
   // Guide documents
   const [introGuide, setIntroGuide] = useState(initialIntroGuide);
@@ -149,7 +159,7 @@ export default function EditProfileModal({
       const scrapeRes = await fetch("/api/scrape-channel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelUrl }),
+        body: JSON.stringify({ channelUrl, apiKey }),
       });
       const scrapeData = await scrapeRes.json();
       if (!scrapeRes.ok) throw new Error(scrapeData.error || "Could not scrape channel.");
@@ -192,9 +202,10 @@ export default function EditProfileModal({
     } finally {
       setTranscriptLoading(false);
     }
-  }, [channelUrl]);
+  }, [channelUrl, apiKey]);
 
   const handleAnalyze = useCallback(async () => {
+    if (!apiKey.trim()) { setStyleError("Add your API key first (API Key tab)."); return; }
     if (pendingScripts.length === 0) { setStyleError("Add scripts before analyzing."); return; }
     setAnalyzeLoading(true);
     setStyleError("");
@@ -205,6 +216,7 @@ export default function EditProfileModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           scripts: pendingScripts.map((s) => ({ name: s.name, text: s.text })),
+          apiKey,
         }),
       });
       const data = await res.json();
@@ -227,7 +239,7 @@ export default function EditProfileModal({
     } finally {
       setAnalyzeLoading(false);
     }
-  }, [pendingScripts]);
+  }, [apiKey, pendingScripts]);
 
   const loadIdentityFromPersona = useCallback(() => {
     const persona = getPersona(personaId);
@@ -275,7 +287,7 @@ export default function EditProfileModal({
       contentStyle,
       completedAt: profile.completedAt,
     };
-    onSave(updatedProfile, styleProfile, introGuide, scriptGuide);
+    onSave(updatedProfile, styleProfile, apiKey, anthropicApiKey, introGuide, scriptGuide);
     setSaved(true);
     setTimeout(() => { setSaved(false); onClose(); }, 800);
   };
@@ -285,6 +297,7 @@ export default function EditProfileModal({
     { id: "style",       label: "My Style" },
     { id: "introguide",  label: "Intro Guide" },
     { id: "scriptguide", label: "Script Guide" },
+    { id: "apikey",      label: "API Keys" },
   ];
 
   const contentStyles = [
@@ -692,6 +705,81 @@ export default function EditProfileModal({
             );
           })()}
 
+          {tab === "apikey" && (
+            <div className="flex flex-col gap-6">
+              {/* Anthropic key — used for script generation */}
+              <div className="flex flex-col gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Anthropic API Key</p>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(99,102,241,0.12)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.25)" }}>Script generation</span>
+                  </div>
+                  <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>
+                    Powers script generation using Claude — Anthropic's best writing model. Get yours at <span style={{ color: "var(--accent)" }}>console.anthropic.com</span>.
+                  </p>
+                </div>
+                <div className="relative">
+                  <input
+                    type={anthropicKeyVisible ? "text" : "password"}
+                    value={anthropicApiKey}
+                    onChange={(e) => setAnthropicApiKey(e.target.value)}
+                    placeholder="sk-ant-..."
+                    className="w-full rounded-lg px-3 py-2.5 text-sm pr-12 outline-none font-mono"
+                    style={INPUT_STYLE}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setAnthropicKeyVisible((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    {anthropicKeyVisible ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px" style={{ background: "var(--border)" }} />
+
+              {/* OpenAI key — used for analysis */}
+              <div className="flex flex-col gap-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>OpenAI API Key</p>
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(92,252,160,0.08)", color: "var(--green)", border: "1px solid rgba(92,252,160,0.2)" }}>Style analysis</span>
+                  </div>
+                  <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>
+                    Used for channel scraping, transcript analysis, and style DNA extraction. Get yours at <span style={{ color: "var(--accent)" }}>platform.openai.com</span>.
+                  </p>
+                </div>
+                <div className="relative">
+                  <input
+                    type={apiKeyVisible ? "text" : "password"}
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="sk-..."
+                    className="w-full rounded-lg px-3 py-2.5 text-sm pr-12 outline-none font-mono"
+                    style={INPUT_STYLE}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setApiKeyVisible((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    {apiKeyVisible ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="rounded-xl px-4 py-3 text-xs leading-5" style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)" }}>
+                🔒 All keys are saved to <code style={{ background: "var(--surface)", padding: "0 3px", borderRadius: 3 }}>localStorage</code> on your device only — never transmitted to any server except their respective APIs.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

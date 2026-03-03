@@ -1,1035 +1,1003 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
+import Onboarding from "@/components/Onboarding";
+import EditProfileModal from "@/components/EditProfileModal";
+import type { CreatorProfile, StyleProfile } from "@/lib/types";
+import { THOMAS_INTRO_GUIDE, THOMAS_SCRIPT_GUIDE } from "@/lib/thomas-guides";
+import { PERSONAS, DEFAULT_PERSONA_ID, getPersona } from "@/lib/personas";
 
-const HeroScene = dynamic(() => import("@/components/HeroScene"), {
-  ssr: false,
-  loading: () => <div className="absolute inset-0" />,
-});
+type ScriptLength = "short" | "medium" | "long";
+type Platform = "youtube" | "reels";
+type ReelType = "educational" | "myth" | "comparison" | "list" | "step-by-step" | "selling";
 
-// ─── Custom cursor ────────────────────────────────────────────────────────────
+const REEL_TYPES: { id: ReelType; label: string; sub: string }[] = [
+  { id: "educational",  label: "Educational",   sub: "Hook → insight → contrast → CTA" },
+  { id: "myth",         label: "Mythbuster",     sub: "Hook → bust a belief → truth → CTA" },
+  { id: "comparison",   label: "Comparison",     sub: "X vs Y → simplify → depth → CTA" },
+  { id: "list",         label: "List",           sub: "Hook → 3–7 quick tips → CTA" },
+  { id: "step-by-step", label: "Step-by-Step",   sub: "Hook → system → results → CTA" },
+  { id: "selling",      label: "Selling",        sub: "Pain point → solution → steps → CTA" },
+];
 
-function Cursor() {
-  const dotRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
-  const pos = useRef({ x: -100, y: -100 });
-  const ring = useRef({ x: -100, y: -100 });
-  const [hovered, setHovered] = useState(false);
-  const raf = useRef<number | null>(null);
+const YOUTUBE_LENGTHS = {
+  short:  { label: "Short",  sub: "5–7 min" },
+  medium: { label: "Medium", sub: "10–15 min" },
+  long:   { label: "Long",   sub: "20+ min" },
+} as const;
 
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      pos.current = { x: e.clientX, y: e.clientY };
-    };
-    const onEnter = () => setHovered(true);
-    const onLeave = () => setHovered(false);
+const REELS_LENGTHS = {
+  short:  { label: "Short",  sub: "15–30 sec" },
+  medium: { label: "Medium", sub: "45–60 sec" },
+  long:   { label: "Long",   sub: "90–120 sec" },
+} as const;
 
-    window.addEventListener("mousemove", onMove);
+const LS_PROFILE      = "yt_creator_profile";
+const LS_STYLE        = "yt_style_profile";
+const LS_KEY          = "yt_api_key";
+const LS_ANT_KEY      = "yt_anthropic_key";
+const LS_INTRO_GUIDE  = "yt_intro_guide";
+const LS_SCRIPT_GUIDE = "yt_script_guide";
+const LS_PERSONA      = "yt_persona_id";
 
-    const update = () => {
-      const dot = dotRef.current;
-      const r = ringRef.current;
-      if (dot && r) {
-        dot.style.transform = `translate(${pos.current.x - 4}px, ${pos.current.y - 4}px)`;
-        ring.current.x += (pos.current.x - ring.current.x) * 0.35;
-        ring.current.y += (pos.current.y - ring.current.y) * 0.35;
-        r.style.transform = `translate(${ring.current.x - 16}px, ${ring.current.y - 16}px)`;
-      }
-      raf.current = requestAnimationFrame(update);
-    };
-    raf.current = requestAnimationFrame(update);
+function countWords(text: string): number {
+  return text.replace(/#{1,6}\s+/g, "").trim().split(/\s+/).filter(Boolean).length;
+}
 
-    const links = document.querySelectorAll("a, button");
-    links.forEach((el) => {
-      el.addEventListener("mouseenter", onEnter);
-      el.addEventListener("mouseleave", onLeave);
-    });
-
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      if (raf.current) cancelAnimationFrame(raf.current);
-    };
-  }, []);
-
-  return (
-    <>
-      <div
-        ref={dotRef}
-        className="fixed top-0 left-0 w-2 h-2 rounded-full bg-[#7c5cfc] pointer-events-none z-[9999] transition-opacity duration-300"
-        style={{ willChange: "transform" }}
-      />
-      <div
-        ref={ringRef}
-        className={`fixed top-0 left-0 w-8 h-8 rounded-full border pointer-events-none z-[9999] ${
-          hovered
-            ? "border-white opacity-80"
-            : "border-[#7c5cfc]/50 opacity-60"
-        }`}
-        style={{ willChange: "transform" }}
-      />
-    </>
+/**
+ * Replaces the content of the first ## HOOK section in a Reels script.
+ * Finds the text between "## HOOK\n" and the next "## " section marker.
+ */
+function swapHook(script: string, newHook: string): string {
+  return script.replace(
+    /(^##\s*HOOK\s*\n)([\s\S]*?)(\n##\s)/im,
+    `$1${newHook}\n$3`
   );
 }
 
-// ─── Scroll reveal hook ───────────────────────────────────────────────────────
-
-function useInView(threshold = 0.1) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) setInView(true); },
-      { threshold }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return { ref, inView };
+function estimatedReadTime(words: number, wpm = 145): string {
+  const totalSeconds = Math.round((words / wpm) * 60);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds}s`;
+  if (seconds === 0) return `${minutes} min`;
+  return `${minutes} min ${seconds}s`;
 }
 
-// ─── Navbar ───────────────────────────────────────────────────────────────────
+// Template section names that should render as Reels-style chips (not YouTube bold headers)
+const REELS_SECTION_NAMES = new Set([
+  "HOOK", "REINFORCE HOOK", "REINFORCE", "MAIN POINT 1", "MAIN POINT 2", "MAIN POINT",
+  "CONTRAST", "EXPLAIN MYTH", "CHALLENGE MYTH", "REITERATE", "EXPLAIN BELIEF",
+  "SIMPLIFY", "THE LIST", "DEEPEN HOOK", "EXPLAIN CONCEPT", "THE STEPS",
+  "SHOWCASE RESULTS", "SOLUTION", "CTA",
+]);
 
-function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    const fn = () => setScrolled(window.scrollY > 30);
-    window.addEventListener("scroll", fn);
-    return () => window.removeEventListener("scroll", fn);
-  }, []);
-
-  return (
-    <nav
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${
-        scrolled
-          ? "bg-[#09090f]/90 backdrop-blur-xl border-b border-white/[0.06]"
-          : ""
-      }`}
-    >
-      <div className="max-w-[1200px] mx-auto px-8 h-[64px] flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="18" height="18" rx="3" fill="#7c5cfc" opacity="0.2" />
-            <path d="M7 8h10M7 12h10M7 16h6" stroke="#7c5cfc" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-          <span className="text-white font-semibold text-[15px] tracking-[-0.3px]">ScriptForge</span>
-        </div>
-
-        <div className="hidden md:flex items-center gap-9">
-          {[["Features", "#features"], ["Process", "#process"], ["Pricing", "#pricing"]].map(([label, href]) => (
-            <a
-              key={label}
-              href={href}
-              className="text-[#666] hover:text-white text-[13px] font-medium transition-colors duration-200 tracking-wide"
+function renderScript(raw: string): React.ReactNode[] {
+  const lines = raw.split("\n");
+  const elements: React.ReactNode[] = [];
+  let key = 0;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) { elements.push(<div key={key++} className="h-3" />); continue; }
+    if (trimmed.startsWith("### ")) {
+      elements.push(
+        <h3 key={key++} className="text-sm font-semibold uppercase tracking-widest mt-6 mb-2" style={{ color: "var(--accent)" }}>
+          {trimmed.replace(/^###\s+/, "")}
+        </h3>
+      );
+      continue;
+    }
+    if (trimmed.startsWith("## ")) {
+      const label = trimmed.replace(/^##\s+/, "").toUpperCase();
+      if (REELS_SECTION_NAMES.has(label)) {
+        // Reels template section — compact pill chip
+        elements.push(
+          <div key={key++} className="flex items-center gap-2 mt-5 mb-1.5">
+            <span
+              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider"
+              style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(124,92,252,0.25)" }}
             >
               {label}
-            </a>
-          ))}
-        </div>
-
-        <Link
-          href="/studio"
-          className="flex items-center gap-2 h-9 px-4 rounded-lg bg-white text-[#09090f] text-[13px] font-semibold hover:bg-white/90 transition-all duration-150 hover:scale-[1.03]"
-        >
-          Open App
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
-      </div>
-    </nav>
-  );
-}
-
-// ─── Animated script terminal mockup ─────────────────────────────────────────
-
-const SCRIPT_SEGMENTS = [
-  {
-    hook: `"Most creators spend 40 hours a month writing scripts.\n\nThey still don't sound like themselves."`,
-    action: "[Beat. Direct to camera.]",
-    body: `"In the next 8 minutes, I'll show you the exact system\nthat changed how I write — and how my channel grew\n3× in 90 days without posting more often."`,
-  },
-  {
-    hook: `"Everyone tells you to post consistently.\n\nHere's why that advice is keeping you stuck."`,
-    action: "[Pause. Let it breathe.]",
-    body: `"The channels that blow up aren't posting more —\nthey're engineering their scripts differently.\nAnd today you're getting the full framework."`,
-  },
-  {
-    hook: `"I used to spend a full Sunday writing one video.\n\nNow it takes 20 minutes. The results are better."`,
-    action: "[Look away. Then back.]",
-    body: `"What changed wasn't my writing ability.\nIt was the system underneath the script.\nHere's exactly how it works..."`,
-  },
-];
-
-function ScriptTerminal() {
-  const [seg, setSeg] = useState(0);
-  const [phase, setPhase] = useState<"typing" | "hold" | "fade">("typing");
-  const [displayed, setDisplayed] = useState("");
-  const [charIdx, setCharIdx] = useState(0);
-  const [visible, setVisible] = useState(true);
-
-  const fullText = `${SCRIPT_SEGMENTS[seg].hook}\n\n${SCRIPT_SEGMENTS[seg].action}\n\n${SCRIPT_SEGMENTS[seg].body}`;
-
-  useEffect(() => {
-    if (phase === "typing") {
-      if (charIdx < fullText.length) {
-        const delay = fullText[charIdx] === "\n" ? 60 : 18 + Math.random() * 16;
-        const t = setTimeout(() => {
-          setDisplayed(fullText.slice(0, charIdx + 1));
-          setCharIdx((c) => c + 1);
-        }, delay);
-        return () => clearTimeout(t);
-      } else {
-        const t = setTimeout(() => setPhase("hold"), 2800);
-        return () => clearTimeout(t);
-      }
-    }
-    if (phase === "hold") {
-      const t = setTimeout(() => setPhase("fade"), 600);
-      return () => clearTimeout(t);
-    }
-    if (phase === "fade") {
-      setVisible(false);
-      const t = setTimeout(() => {
-        setSeg((s) => (s + 1) % SCRIPT_SEGMENTS.length);
-        setDisplayed("");
-        setCharIdx(0);
-        setPhase("typing");
-        setVisible(true);
-      }, 500);
-      return () => clearTimeout(t);
-    }
-  }, [phase, charIdx, fullText]);
-
-  const lines = displayed.split("\n");
-
-  return (
-    <div className="relative w-full max-w-[480px] rounded-[16px] overflow-hidden border border-white/[0.08] bg-[#0d0d14] shadow-[0_0_80px_rgba(124,92,252,0.15),0_0_0_1px_rgba(255,255,255,0.04)]">
-      {/* Title bar */}
-      <div className="flex items-center gap-2 px-4 h-10 border-b border-white/[0.06] bg-[#111119]">
-        <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-        <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
-        <span className="w-3 h-3 rounded-full bg-[#28c840]" />
-        <span className="ml-3 text-[11px] text-[#444] font-mono tracking-wide">scriptforge — thomas graham style</span>
-        <div className="ml-auto flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#7c5cfc] animate-pulse" />
-          <span className="text-[10px] text-[#7c5cfc] font-semibold">LIVE</span>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div
-        className={`px-5 py-5 min-h-[280px] transition-opacity duration-400 font-mono text-[13px] leading-[1.8]`}
-        style={{ opacity: visible ? 1 : 0 }}
-      >
-        {/* Labels */}
-        <div className="flex items-center gap-2 mb-4">
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#7c5cfc]/15 text-[#a78bfa] tracking-widest">HOOK</span>
-          <span className="text-[#333] text-[10px] font-mono">— youtube long-form</span>
-        </div>
-
-        {lines.map((line, i) => {
-          const isAction = line.startsWith("[");
-          const isEmpty = line === "";
-          const isBodyStart = displayed.includes(SCRIPT_SEGMENTS[seg].action) &&
-            i > displayed.split("\n").findIndex(l => l.startsWith("[")) + 1;
-
-          if (isEmpty) return <div key={i} className="h-3" />;
-          if (isAction) {
-            return (
-              <div key={i} className="text-[#4a4a6a] italic text-[11px] my-2">
-                {line}
-              </div>
-            );
-          }
-          if (isBodyStart) {
-            return (
-              <p key={i} className="text-[#8888a4] text-[12px]">
-                {line}
-              </p>
-            );
-          }
-          return (
-            <p key={i} className={`text-[#e8e8f0] ${i === 0 ? "font-medium" : ""}`}>
-              {line}
-            </p>
-          );
-        })}
-
-        {/* Blinking cursor */}
-        {phase === "typing" && (
-          <span className="inline-block w-[2px] h-[14px] bg-[#7c5cfc] align-middle animate-pulse ml-px" />
-        )}
-      </div>
-
-      {/* Footer bar */}
-      <div className="px-5 py-3 border-t border-white/[0.05] flex items-center justify-between">
-        <div className="flex gap-1.5">
-          {SCRIPT_SEGMENTS.map((_, i) => (
-            <div
-              key={i}
-              className="h-1 rounded-full transition-all duration-500"
-              style={{
-                width: i === seg ? "20px" : "6px",
-                backgroundColor: i === seg ? "#7c5cfc" : "#2a2a3a",
-              }}
-            />
-          ))}
-        </div>
-        <span className="text-[10px] text-[#2a2a3a] font-mono">
-          generated in 8s
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ─── Marquee ──────────────────────────────────────────────────────────────────
-
-const MARQUEE_ITEMS = [
-  "Style DNA Extraction",
-  "YouTube Long-Form",
-  "Instagram Reels",
-  "Hook Engineering",
-  "Thomas Graham System",
-  "Alex Hormozi Framework",
-  "Rehook Architecture",
-  "Curiosity Gap Mechanics",
-  "Voice Matching",
-  "Retention Optimization",
-  "Script Export",
-  "Channel Scraping",
-];
-
-function Marquee() {
-  return (
-    <div className="relative overflow-hidden border-y border-white/[0.06] bg-[#09090f] py-4 select-none">
-      <div className="absolute left-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-r from-[#09090f] to-transparent pointer-events-none" />
-      <div className="absolute right-0 top-0 bottom-0 w-24 z-10 bg-gradient-to-l from-[#09090f] to-transparent pointer-events-none" />
-      <div className="flex animate-marquee whitespace-nowrap">
-        {[...MARQUEE_ITEMS, ...MARQUEE_ITEMS].map((item, i) => (
-          <div key={i} className="flex items-center gap-4 mx-4 flex-shrink-0">
-            <span className="text-[12px] text-[#444] font-medium tracking-[0.08em] uppercase">
-              {item}
             </span>
-            <span className="w-1 h-1 rounded-full bg-[#7c5cfc]/50 flex-shrink-0" />
+            <span className="flex-1 h-px" style={{ background: "var(--border)" }} />
           </div>
-        ))}
-      </div>
-    </div>
-  );
+        );
+      } else {
+        // YouTube section header
+        elements.push(
+          <h2 key={key++} className="text-base font-bold uppercase tracking-widest mt-8 mb-3 pb-2 border-b" style={{ color: "var(--accent)", borderColor: "var(--border)" }}>
+            {label}
+          </h2>
+        );
+      }
+      continue;
+    }
+    if (trimmed === "---") {
+      elements.push(<hr key={key++} className="my-8 border-t" style={{ borderColor: "var(--border-light)" }} />);
+      continue;
+    }
+    // Render **bold** inline text
+    if (trimmed.includes("**")) {
+      const parts = trimmed.split(/(\*\*[^*]+\*\*)/g);
+      elements.push(
+        <p key={key++} className="leading-7 mb-1" style={{ color: "var(--foreground)" }}>
+          {parts.map((part, i) =>
+            part.startsWith("**") && part.endsWith("**")
+              ? <strong key={i}>{part.slice(2, -2)}</strong>
+              : part
+          )}
+        </p>
+      );
+      continue;
+    }
+    elements.push(
+      <p key={key++} className="leading-7 mb-1" style={{ color: "var(--foreground)" }}>{trimmed}</p>
+    );
+  }
+  return elements;
 }
 
-// ─── Hero ─────────────────────────────────────────────────────────────────────
-
-function Hero() {
+export default function Home() {
   const [ready, setReady] = useState(false);
+  const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
+  const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
+  const [apiKey, setApiKey] = useState("");
+  const [anthropicApiKey, setAnthropicApiKey] = useState("");
+  const [introGuide, setIntroGuide] = useState("");
+  const [scriptGuide, setScriptGuide] = useState("");
+  const [personaId, setPersonaId] = useState(DEFAULT_PERSONA_ID);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+
+  // ── Variable inputs (per video) ───────────────────────────────────────────
+  const [platform, setPlatform] = useState<Platform>("youtube");
+  const [reelType, setReelType] = useState<ReelType>("educational");
+  const [videoTitle, setVideoTitle] = useState("");
+  const [videoIdea, setVideoIdea] = useState("");
+  const [referenceInfo, setReferenceInfo] = useState("");
+  const [subheadings, setSubheadings] = useState("");
+  const [userIntro, setUserIntro] = useState("");
+  const [scriptLength, setScriptLength] = useState<ScriptLength>("medium");
+
+  // Reference file upload
+  const [refUploading, setRefUploading] = useState(false);
+  const refFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Generation
+  const [script, setScript] = useState("");
+  const [hookAlternatives, setHookAlternatives] = useState<string[]>([]);
+  const [selectedHookIdx, setSelectedHookIdx] = useState<number>(-1); // -1 = original
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+  const outputRef = useRef<HTMLDivElement>(null);
+
+  // Load persisted data
   useEffect(() => {
-    const t = setTimeout(() => setReady(true), 100);
-    return () => clearTimeout(t);
+    const rawProfile = localStorage.getItem(LS_PROFILE);
+    const rawStyle   = localStorage.getItem(LS_STYLE);
+    const rawKey     = localStorage.getItem(LS_KEY);
+    const rawAntKey  = localStorage.getItem(LS_ANT_KEY);
+    const rawIntro   = localStorage.getItem(LS_INTRO_GUIDE);
+    const rawScript  = localStorage.getItem(LS_SCRIPT_GUIDE);
+    if (rawProfile) { try { setCreatorProfile(JSON.parse(rawProfile)); } catch { /* ignore */ } }
+    if (rawStyle)   { try { setStyleProfile(JSON.parse(rawStyle)); }   catch { /* ignore */ } }
+    if (rawKey)     setApiKey(rawKey);
+    if (rawAntKey)  setAnthropicApiKey(rawAntKey);
+    // Seed with Thomas's guides as defaults if user hasn't uploaded custom ones
+    const rawPersona = localStorage.getItem(LS_PERSONA);
+    const pid = rawPersona ?? DEFAULT_PERSONA_ID;
+    setPersonaId(pid);
+    const persona = getPersona(pid);
+    if (rawIntro)   setIntroGuide(rawIntro);
+    else            setIntroGuide(persona.introGuide);
+    if (rawScript)  setScriptGuide(rawScript);
+    else            setScriptGuide(persona.scriptGuide);
+    setReady(true);
   }, []);
 
+  const persistAll = useCallback(
+    (profile: CreatorProfile, style: StyleProfile | null, key: string, antKey?: string, iGuide?: string, sGuide?: string) => {
+      setCreatorProfile(profile);
+      setStyleProfile(style);
+      setApiKey(key);
+      localStorage.setItem(LS_PROFILE, JSON.stringify(profile));
+      if (style) localStorage.setItem(LS_STYLE, JSON.stringify(style));
+      else localStorage.removeItem(LS_STYLE);
+      localStorage.setItem(LS_KEY, key);
+      if (antKey !== undefined) {
+        setAnthropicApiKey(antKey);
+        if (antKey) localStorage.setItem(LS_ANT_KEY, antKey);
+        else localStorage.removeItem(LS_ANT_KEY);
+      }
+      if (iGuide !== undefined) {
+        setIntroGuide(iGuide);
+        if (iGuide) localStorage.setItem(LS_INTRO_GUIDE, iGuide);
+        else localStorage.removeItem(LS_INTRO_GUIDE);
+      }
+      if (sGuide !== undefined) {
+        setScriptGuide(sGuide);
+        if (sGuide) localStorage.setItem(LS_SCRIPT_GUIDE, sGuide);
+        else localStorage.removeItem(LS_SCRIPT_GUIDE);
+      }
+    },
+    []
+  );
+
+  const handlePersonaChange = useCallback((pid: string) => {
+    const persona = getPersona(pid);
+    setPersonaId(pid);
+    localStorage.setItem(LS_PERSONA, pid);
+    // Only switch guides if user hasn't uploaded custom ones
+    const hasCustomIntro  = !!localStorage.getItem(LS_INTRO_GUIDE);
+    const hasCustomScript = !!localStorage.getItem(LS_SCRIPT_GUIDE);
+    if (!hasCustomIntro)  setIntroGuide(persona.introGuide);
+    if (!hasCustomScript) setScriptGuide(persona.scriptGuide);
+  }, []);
+
+  const handleOnboardingComplete = useCallback(
+    (profile: CreatorProfile, style: StyleProfile | null, key: string) => {
+      persistAll(profile, style, key);
+    },
+    [persistAll]
+  );
+
+  // Upload reference file for per-video use
+  const handleRefFileUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setRefUploading(true);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((f) => formData.append("files", f));
+      const res = await fetch("/api/parse-doc", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed.");
+      const texts: string[] = data.scripts.map((s: { text: string }) => s.text);
+      setReferenceInfo((prev) => (prev ? prev + "\n\n---\n\n" : "") + texts.join("\n\n---\n\n"));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "File upload failed.");
+    } finally {
+      setRefUploading(false);
+    }
+  }, []);
+
+  const handleGenerate = useCallback(async () => {
+    if (!anthropicApiKey.trim() && !apiKey.trim()) {
+      setError("No API key found. Add your Anthropic key in Edit Profile → API Keys.");
+      return;
+    }
+    if (!videoTitle.trim()) { setError("Please enter a video title."); return; }
+    if (!creatorProfile) { setError("Creator profile not found. Please complete onboarding."); return; }
+
+    setLoading(true);
+    setError("");
+    setScript("");
+    setHookAlternatives([]);
+    setSelectedHookIdx(-1);
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform,
+          reelType: platform === "reels" ? reelType : undefined,
+          videoTitle,
+          videoIdea,
+          userIntro,
+          referenceInfo,
+          subheadings,
+          scriptLength,
+          styleAnalysis: styleProfile?.analysis ?? "",
+          scriptSamples: (styleProfile?.scripts ?? [])
+            .filter((s) => s.sample)
+            .slice(0, 3)
+            .map((s) => ({ name: s.name, sample: s.sample })),
+          creatorProfile,
+          introGuide,
+          scriptGuide,
+          personaId,
+          apiKey,
+          anthropicApiKey,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Generation failed.");
+      setScript(data.script);
+      if (data.hookAlternatives?.length) {
+        setHookAlternatives(data.hookAlternatives);
+        setSelectedHookIdx(-1);
+      }
+      setTimeout(() => outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey, anthropicApiKey, platform, reelType, videoTitle, videoIdea, userIntro, referenceInfo, subheadings, scriptLength, styleProfile, creatorProfile, introGuide, scriptGuide, personaId]);
+
+  const handleCopy = useCallback(async () => {
+    await navigator.clipboard.writeText(script);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [script]);
+
+  const handleDownload = useCallback(() => {
+    const safeTitle = videoTitle.replace(/[^a-zA-Z0-9\s-]/g, "").trim().replace(/\s+/g, "_") || "script";
+    const platformLabel = platform === "reels" ? "Reel" : "YouTube";
+    const filename = `${safeTitle}_${platformLabel}.html`;
+    const wpm = platform === "reels" ? 150 : 145;
+    const wc = countWords(script);
+    const speakTime = estimatedReadTime(wc, wpm);
+    const date = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+    // Convert script markdown to HTML
+    const bodyHtml = script.split("\n").map((line) => {
+      const t = line.trim();
+      if (!t) return `<div class="spacer"></div>`;
+      if (t.startsWith("## ")) {
+        const label = t.replace(/^##\s+/, "").toUpperCase();
+        if (REELS_SECTION_NAMES.has(label)) {
+          return `<div class="section-chip"><span class="chip">${label}</span></div>`;
+        }
+        return `<h2>${label}</h2>`;
+      }
+      if (t.startsWith("### ")) return `<h3>${t.replace(/^###\s+/, "")}</h3>`;
+      if (t === "---") return `<hr>`;
+      // inline bold
+      const html = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      return `<p>${html}</p>`;
+    }).join("\n");
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${videoTitle || "Script"}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f8f8f8;
+    color: #111;
+    padding: 48px 24px;
+    line-height: 1.75;
+  }
+  .page {
+    max-width: 720px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 16px;
+    padding: 52px 60px;
+    box-shadow: 0 4px 40px rgba(0,0,0,0.08);
+  }
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+  }
+  .platform-badge {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: #ede9fe;
+    color: #6d28d9;
+  }
+  .meta-info {
+    font-size: 12px;
+    color: #888;
+  }
+  .meta-info span { margin-right: 14px; }
+  .meta-info strong { color: #444; font-weight: 600; }
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #0f0f0f;
+    margin-bottom: 8px;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+  }
+  .divider {
+    height: 1px;
+    background: #ebebeb;
+    margin: 28px 0 32px;
+  }
+  p {
+    font-size: 15.5px;
+    color: #1a1a1a;
+    margin-bottom: 6px;
+    line-height: 1.8;
+  }
+  strong { font-weight: 600; }
+  h2 {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6d28d9;
+    margin: 36px 0 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ebebeb;
+  }
+  h3 {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6d28d9;
+    margin: 28px 0 10px;
+  }
+  .section-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 22px 0 8px;
+  }
+  .section-chip::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #ebebeb;
+  }
+  .chip {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 9px;
+    border-radius: 5px;
+    background: #ede9fe;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+    white-space: nowrap;
+  }
+  hr {
+    border: none;
+    border-top: 1px solid #ebebeb;
+    margin: 32px 0;
+  }
+  .spacer { height: 4px; }
+  .footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #ebebeb;
+    font-size: 11px;
+    color: #aaa;
+    text-align: center;
+  }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .page { box-shadow: none; padding: 40px; border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="meta">
+    <span class="platform-badge">${platformLabel}</span>
+    <div class="meta-info">
+      <span><strong>${wc.toLocaleString()}</strong> words</span>
+      <span>~<strong>${speakTime}</strong> speak time</span>
+      <span>${date}</span>
+    </div>
+  </div>
+  <h1>${videoTitle || "Untitled Script"}</h1>
+  <div class="divider"></div>
+  <div class="content">
+${bodyHtml}
+  </div>
+  <div class="footer">Generated with Script Writer · ${platformLabel} · ${date}</div>
+</div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [script, videoTitle, platform]);
+
+  const wordCount = script ? countWords(script) : 0;
+
+  if (!ready) return null;
+  if (!creatorProfile) return <Onboarding onComplete={handleOnboardingComplete} />;
+
+  const fixedGuideCount = [introGuide, scriptGuide].filter(Boolean).length;
+
   return (
-    <section className="relative min-h-screen flex flex-col overflow-hidden bg-[#09090f]">
-      <HeroScene />
+    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+      {showEditProfile && (
+        <EditProfileModal
+          profile={creatorProfile}
+          styleProfile={styleProfile}
+          apiKey={apiKey}
+          anthropicApiKey={anthropicApiKey}
+          introGuide={introGuide}
+          scriptGuide={scriptGuide}
+          personaId={personaId}
+          onSave={(p, s, k, antK, iG, sG) => { persistAll(p, s, k, antK, iG, sG); setShowEditProfile(false); }}
+          onClose={() => setShowEditProfile(false)}
+        />
+      )}
 
-      {/* Vignette */}
-      <div className="absolute inset-0 bg-radial-[ellipse_at_30%_50%] from-transparent via-transparent to-[#09090f]/70 pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#09090f]/80 via-[#09090f]/40 to-transparent pointer-events-none" />
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#09090f] pointer-events-none" />
+      {/* Header */}
+      <header className="border-b sticky top-0 z-10 backdrop-blur-sm" style={{ borderColor: "var(--border)", background: "rgba(15,15,19,0.92)" }}>
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ background: "var(--accent)" }}>▶</div>
+            <div>
+              <h1 className="text-lg font-bold leading-none" style={{ color: "var(--foreground)" }}>ScriptForge</h1>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>YouTube Script Generator</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}>
+              <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: styleProfile ? "var(--green)" : "var(--accent)" }} />
+              {creatorProfile.name || "Creator"}
+              {styleProfile && <span style={{ color: "var(--border-light)" }}>· {styleProfile.scripts.length} scripts</span>}
+            </div>
+            <button
+              onClick={() => setShowEditProfile(true)}
+              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+              style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+            >
+              Edit Profile
+            </button>
+          </div>
+        </div>
+      </header>
 
-      <div className="relative z-10 flex-1 flex items-center">
-        <div className="max-w-[1200px] mx-auto w-full px-8 pt-28 pb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-16 items-center">
-
-            {/* Left */}
-            <div className="max-w-[560px]">
-              <div
-                className={`flex items-center gap-3 mb-8 transition-all duration-700 ${ready ? "opacity-100" : "opacity-0 -translate-y-2"}`}
-              >
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.12em] uppercase text-[#7c5cfc]">
-                  <span className="w-4 h-px bg-[#7c5cfc]" />
-                  AI Script Generation
-                </div>
-              </div>
-
-              <h1
-                className={`font-black tracking-[-3px] leading-[0.92] text-white mb-7 transition-all duration-700 delay-100 ${ready ? "opacity-100" : "opacity-0 translate-y-4"}`}
-                style={{ fontSize: "clamp(52px, 7vw, 88px)" }}
-              >
-                Your next<br />
-                script.<br />
-                <em className="not-italic text-[#7c5cfc]">Already<br />written.</em>
-              </h1>
-
-              <p
-                className={`text-[#666] text-[17px] leading-[1.7] mb-10 max-w-[440px] transition-all duration-700 delay-200 ${ready ? "opacity-100" : "opacity-0 translate-y-4"}`}
-              >
-                Upload your existing scripts. ScriptForge extracts your writing
-                DNA and generates YouTube scripts in your exact voice — in under
-                60 seconds.
+      <main className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-1 xl:grid-cols-[1fr_480px] gap-8">
+        {/* LEFT: Output */}
+        <div className="order-2 xl:order-1">
+          {!script && !loading && (
+            <div className="rounded-2xl border flex flex-col items-center justify-center text-center py-24 px-8 sticky top-24" style={{ borderColor: "var(--border)", background: "var(--surface)", minHeight: 500 }}>
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-5" style={{ background: "var(--accent-glow)", border: "1px solid var(--border-light)" }}>✍️</div>
+              <h2 className="text-xl font-semibold mb-2" style={{ color: "var(--foreground)" }}>Your script will appear here</h2>
+              <p className="max-w-sm text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+                Fill in your video details and hit Generate. Every script is written from your identity, positioning, and voice.
               </p>
-
-              <div
-                className={`flex items-center gap-4 flex-wrap transition-all duration-700 delay-300 ${ready ? "opacity-100" : "opacity-0 translate-y-4"}`}
-              >
-                <Link
-                  href="/studio"
-                  className="group flex items-center gap-2.5 h-12 px-6 rounded-xl bg-[#7c5cfc] hover:bg-[#6b4eeb] text-white font-bold text-[15px] transition-all duration-200 hover:shadow-[0_0_40px_rgba(124,92,252,0.5)] hover:scale-[1.03] active:scale-[0.98]"
-                >
-                  Generate My First Script
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="group-hover:translate-x-0.5 transition-transform">
-                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </Link>
-                <div className="flex items-center gap-2 text-[#444] text-[13px]">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#7c5cfc" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  No credit card required
+              {!styleProfile && (
+                <div className="mt-6 px-4 py-3 rounded-xl text-xs leading-5 max-w-sm text-left" style={{ background: "rgba(124,92,252,0.08)", color: "var(--accent)", border: "1px solid rgba(124,92,252,0.2)" }}>
+                  <strong>Tip:</strong> Add your scripts in Edit Profile → Style to unlock authentic voice matching.
                 </div>
-              </div>
-
-              {/* Social proof row */}
-              <div
-                className={`mt-12 pt-8 border-t border-white/[0.06] flex items-center gap-8 transition-all duration-700 delay-[400ms] ${ready ? "opacity-100" : "opacity-0 translate-y-4"}`}
-              >
-                {[
-                  ["847", "Creators"],
-                  ["12K+", "Scripts"],
-                  ["94%", "Style Match"],
-                ].map(([val, label]) => (
-                  <div key={label}>
-                    <div className="text-white font-black text-[22px] tracking-[-0.5px]">{val}</div>
-                    <div className="text-[#444] text-[12px] font-medium">{label}</div>
-                  </div>
+              )}
+            </div>
+          )}
+          {loading && (
+            <div className="rounded-2xl border flex flex-col items-center justify-center text-center py-24 px-8 sticky top-24" style={{ borderColor: "var(--border)", background: "var(--surface)", minHeight: 500 }}>
+              <div className="flex gap-1.5 mb-6">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ background: "var(--accent)", animationDelay: `${i * 0.15}s` }} />
                 ))}
               </div>
+              <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Writing in your voice…</p>
+              <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Applying your identity, positioning, and style — 20–40 seconds</p>
+            </div>
+          )}
+          {script && (
+            <div ref={outputRef} className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{platform === "reels" ? "Reel Script" : "Generated Script"}</span>
+                  <div className="flex items-center gap-3 text-xs" style={{ color: "var(--muted)" }}>
+                    <span><span className="font-medium" style={{ color: "var(--foreground)" }}>{wordCount.toLocaleString()}</span> words</span>
+                    <span>·</span>
+                    <span>~<span className="font-medium" style={{ color: "var(--foreground)" }}>{estimatedReadTime(wordCount, platform === "reels" ? 150 : 145)}</span> speak time</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleDownload}
+                    title="Download as .txt"
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                    style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border-light)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "var(--foreground)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--muted)"; }}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M6.5 1v7M3.5 5.5l3 3 3-3M2 10h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Download
+                  </button>
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                    style={{ background: copied ? "var(--accent-glow)" : "var(--surface)", color: copied ? "var(--accent)" : "var(--muted)", border: "1px solid var(--border-light)" }}
+                  >
+                    {copied ? "✓ Copied!" : "Copy"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Hook Selector — Reels only */}
+              {platform === "reels" && hookAlternatives.length > 0 && (
+                <div className="px-6 py-3 border-b flex flex-col gap-2" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider"
+                      style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(124,92,252,0.25)" }}
+                    >
+                      HOOK
+                    </span>
+                    <span className="text-xs font-medium" style={{ color: "var(--foreground)" }}>Pick the best opening hook</span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {/* Original hook option */}
+                    {[{ label: "Original (generated)", hook: null }, ...hookAlternatives.map((h, i) => ({ label: `Option ${i + 1}`, hook: h }))].map(({ label, hook }, idx) => {
+                      const isSelected = (hook === null && selectedHookIdx === -1) || selectedHookIdx === idx - 1;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            if (hook === null) {
+                              setSelectedHookIdx(-1);
+                            } else {
+                              setSelectedHookIdx(idx - 1);
+                              setScript((prev) => swapHook(prev, hook));
+                            }
+                          }}
+                          className="text-left rounded-lg px-3 py-2 transition-all"
+                          style={{
+                            background: isSelected ? "var(--accent-glow)" : "var(--surface)",
+                            border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
+                          }}
+                        >
+                          <div className="flex items-start gap-2">
+                            <span className="text-xs font-semibold mt-0.5 flex-shrink-0" style={{ color: isSelected ? "var(--accent)" : "var(--muted)" }}>{label}</span>
+                            {hook && <span className="text-xs leading-5" style={{ color: "var(--foreground)" }}>{hook}</span>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="px-8 py-6 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
+                <div className="text-sm">{renderScript(script)}</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: Inputs */}
+        <div className="order-1 xl:order-2 flex flex-col gap-5">
+
+          {/* ── PERSONA SELECTOR ─────────────────────────────────────────── */}
+          <div className="rounded-2xl border p-5 flex flex-col gap-3" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>Writing Style</p>
+            <div className="grid grid-cols-2 gap-2.5">
+              {PERSONAS.map((persona) => {
+                const active = personaId === persona.id;
+                return (
+                  <button
+                    key={persona.id}
+                    onClick={() => persona.available && handlePersonaChange(persona.id)}
+                    disabled={!persona.available}
+                    className="relative flex flex-col gap-2 rounded-xl p-3.5 text-left transition-all"
+                    style={{
+                      background: active ? "var(--accent-glow)" : "var(--surface-2)",
+                      border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                      opacity: persona.available ? 1 : 0.45,
+                      cursor: persona.available ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    {!persona.available && (
+                      <span className="absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", fontSize: "9px" }}>
+                        Soon
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                        style={{ background: active ? persona.color : `${persona.color}22`, color: active ? "#fff" : persona.color }}
+                      >
+                        {persona.avatar}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold leading-none truncate" style={{ color: active ? "var(--foreground)" : "var(--foreground)" }}>
+                          {persona.name}
+                        </p>
+                        {active && (
+                          <p className="text-xs mt-0.5 leading-3" style={{ color: "var(--accent)", fontSize: "10px" }}>Active</p>
+                        )}
+                      </div>
+                    </div>
+                    <p className="text-xs leading-4" style={{ color: "var(--muted)", fontSize: "11px" }}>
+                      {persona.tagline}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* ── FIXED INPUTS status bar ───────────────────────────────────── */}
+          <div className="rounded-2xl border px-5 py-4 flex flex-col gap-3" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>Fixed Inputs</p>
+              <button onClick={() => setShowEditProfile(true)} className="text-xs" style={{ color: "var(--accent)" }}>
+                Edit →
+              </button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {[
+                {
+                  label: "My Style",
+                  value: styleProfile ? `${styleProfile.scripts.length} scripts analyzed` : "Not configured",
+                  ok: !!styleProfile,
+                },
+                {
+                  label: "Who Am I",
+                  value: creatorProfile.name || "Not configured",
+                  ok: !!creatorProfile.name,
+                },
+                {
+                  label: "Intro Guide",
+                  value: introGuide ? `${countWords(introGuide).toLocaleString()} words` : "Not uploaded",
+                  ok: !!introGuide,
+                },
+                {
+                  label: "Script Guide",
+                  value: scriptGuide ? `${countWords(scriptGuide).toLocaleString()} words` : "Not uploaded",
+                  ok: !!scriptGuide,
+                },
+              ].map(({ label, value, ok }) => (
+                <div key={label} className="flex items-center gap-3">
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ok ? "var(--green)" : "var(--border-light)" }} />
+                  <span className="text-xs w-20 flex-shrink-0" style={{ color: "var(--muted)" }}>{label}</span>
+                  <span className="text-xs leading-5 truncate" style={{ color: ok ? "var(--foreground)" : "var(--border-light)" }}>
+                    {value}
+                  </span>
+                </div>
+              ))}
+              {fixedGuideCount < 2 && (
+                <p className="text-xs mt-1 leading-4" style={{ color: "var(--muted)" }}>
+                  Add your intro & script writing guides in <button onClick={() => setShowEditProfile(true)} className="underline" style={{ color: "var(--accent)" }}>Edit Profile</button> for better results.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* ── VARIABLE INPUTS ───────────────────────────────────────────── */}
+          <div className="rounded-2xl border p-5 flex flex-col gap-5" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+
+            {/* Platform toggle */}
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>Platform</p>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { id: "youtube" as Platform, icon: "▶", label: "YouTube",            sub: "Long-form scripts" },
+                  { id: "reels"   as Platform, icon: "⬜", label: "Instagram · TikTok", sub: "Reels & short-form"  },
+                ] as const).map(({ id, icon, label, sub }) => {
+                  const active = platform === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setPlatform(id)}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-all"
+                      style={{
+                        background: active ? "var(--accent-glow)" : "var(--surface-2)",
+                        border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                      }}
+                    >
+                      <span className="text-base leading-none">{icon}</span>
+                      <div>
+                        <p className="text-xs font-semibold leading-none" style={{ color: active ? "var(--accent)" : "var(--foreground)" }}>{label}</p>
+                        <p className="text-xs mt-0.5" style={{ color: "var(--muted)", fontSize: "10px" }}>{sub}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Right — terminal */}
-            <div
-              className={`hidden lg:block transition-all duration-1000 delay-500 ${ready ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
-            >
-              <ScriptTerminal />
+            {/* Reel Type selector — only for Instagram/TikTok */}
+            {platform === "reels" && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>Type of Video</label>
+                <div className="relative">
+                  <select
+                    value={reelType}
+                    onChange={(e) => setReelType(e.target.value as ReelType)}
+                    className="w-full appearance-none rounded-lg px-3 py-2.5 pr-8 text-sm outline-none cursor-pointer"
+                    style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                  >
+                    {REEL_TYPES.map(({ id, label, sub }) => (
+                      <option key={id} value={id}>{label} — {sub}</option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs" style={{ color: "var(--muted)" }}>▾</span>
+                </div>
+                <p className="text-xs" style={{ color: "var(--muted)" }}>
+                  {REEL_TYPES.find(t => t.id === reelType)?.sub}
+                </p>
+              </div>
+            )}
+
+            {/* 1. Video Title */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+                Video Title <span style={{ color: "var(--red)" }}>*</span>
+              </label>
+              <input
+                type="text"
+                value={videoTitle}
+                onChange={(e) => setVideoTitle(e.target.value)}
+                placeholder="e.g. How I Built a SaaS in 7 Days (From Zero)"
+                className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+                style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
             </div>
 
-          </div>
-        </div>
-      </div>
+            {/* 2. Video Idea */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+                Video Idea
+                <span className="ml-1.5 px-1.5 py-0.5 rounded" style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)", fontSize: "10px" }}>optional</span>
+              </label>
+              <textarea
+                value={videoIdea}
+                onChange={(e) => setVideoIdea(e.target.value)}
+                placeholder={"Describe the concept, angle, or what you want covered.\n\ne.g. I want to cover the 3 biggest mistakes beginners make when posting Reels — focus on algorithm timing, wrong hooks, and ignoring audio trends."}
+                rows={4}
+                className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-y leading-6"
+                style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", minHeight: 90 }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+            </div>
 
-      <Marquee />
-    </section>
-  );
-}
+            {/* 3. Reference Information */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+                  Reference Information
+                  <span className="ml-1.5 px-1.5 py-0.5 rounded" style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)", fontSize: "10px" }}>optional</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => refFileInputRef.current?.click()}
+                  disabled={refUploading}
+                  className="text-xs px-2.5 py-1 rounded-lg disabled:opacity-50"
+                  style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)" }}
+                >
+                  {refUploading ? "Uploading…" : "Upload file"}
+                </button>
+                <input
+                  ref={refFileInputRef}
+                  type="file"
+                  accept=".docx,.txt,.md"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleRefFileUpload(e.target.files)}
+                />
+              </div>
+              <textarea
+                value={referenceInfo}
+                onChange={(e) => setReferenceInfo(e.target.value)}
+                placeholder={"Paste articles, stats, product specs, research, talking points — anything the script should pull from.\n\nWhen provided, the AI primarily draws facts and examples from this material."}
+                rows={5}
+                className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-y leading-6"
+                style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", minHeight: 100 }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+              {referenceInfo && (
+                <p className="text-xs" style={{ color: "var(--muted)" }}>
+                  {countWords(referenceInfo).toLocaleString()} words · AI will draw facts primarily from this
+                </p>
+              )}
+            </div>
 
-// ─── Feature sections ─────────────────────────────────────────────────────────
+            {/* 4. Subheadings / Outline — YouTube only */}
+            {platform === "youtube" && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+                  Subheadings / Outline
+                  <span className="ml-1.5 px-1.5 py-0.5 rounded" style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)", fontSize: "10px" }}>optional</span>
+                </label>
+                <textarea
+                  value={subheadings}
+                  onChange={(e) => setSubheadings(e.target.value)}
+                  placeholder={"List the sections or talking points you want covered.\n\ne.g.\n- Why most people post at the wrong time\n- The 3 hook formats that actually convert\n- How audio trends change the game"}
+                  rows={4}
+                  className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-y leading-6"
+                  style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", minHeight: 90 }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                />
+              </div>
+            )}
 
-const FEATURE_SECTIONS = [
-  {
-    num: "01",
-    tag: "Style DNA",
-    title: "It learns how\nyou write.",
-    body: "Upload 2–5 of your existing scripts. ScriptForge performs a forensic analysis — extracting your vocabulary range, sentence rhythm, structural patterns, tonal palette, and rhetorical fingerprints. Every generated script is built on that foundation.",
-    detail: [
-      "Vocabulary & word-choice mapping",
-      "Sentence length distribution",
-      "Structural DNA extraction",
-      "Tonal fingerprint analysis",
-    ],
-    visual: (
-      <div className="rounded-2xl border border-white/[0.07] bg-[#0d0d14] p-6 font-mono text-[12px] leading-[1.9] w-full max-w-[380px]">
-        <div className="text-[10px] text-[#7c5cfc] font-bold tracking-widest mb-4">STYLE DNA REPORT</div>
-        {[
-          ["Avg. sentence length", "14–18 words"],
-          ["Tone", "Calm authority"],
-          ["Vocabulary tier", "Accessible + precise"],
-          ["Hook archetype", "Counter-intuitive claim"],
-          ["Transition style", "Rapid-cut + beat pauses"],
-          ["CTA pattern", "Logical consequence"],
-        ].map(([k, v]) => (
-          <div key={k} className="flex justify-between gap-4 py-1 border-b border-white/[0.04]">
-            <span className="text-[#444]">{k}</span>
-            <span className="text-[#a78bfa] font-medium">{v}</span>
+            {/* 5. Opening hook / Introduction */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+                {platform === "reels" ? "Opening Hook" : "Your Introduction"}
+                <span className="ml-1.5 px-1.5 py-0.5 rounded" style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)", fontSize: "10px" }}>optional</span>
+              </label>
+              <textarea
+                value={userIntro}
+                onChange={(e) => setUserIntro(e.target.value)}
+                placeholder={platform === "reels"
+                  ? "Write your opening hook word-for-word. The AI uses it exactly as written and builds the reel around it."
+                  : "Write your intro word-for-word. The AI uses it exactly as written, then builds the rest of the script to match its angle, energy, and promise."}
+                rows={platform === "reels" ? 2 : 4}
+                className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-y leading-6"
+                style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", minHeight: platform === "reels" ? 60 : 90 }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+            </div>
+
+            {/* 6. Script / Reel Length */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+                {platform === "reels" ? "Reel Length" : "Script Length"}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(["short", "medium", "long"] as ScriptLength[]).map((len) => {
+                  const info = platform === "reels" ? REELS_LENGTHS : YOUTUBE_LENGTHS;
+                  const active = scriptLength === len;
+                  return (
+                    <button
+                      key={len}
+                      onClick={() => setScriptLength(len)}
+                      className="rounded-lg px-3 py-2.5 text-xs font-medium transition-all flex flex-col items-center gap-0.5"
+                      style={{ background: active ? "var(--accent-glow)" : "var(--surface-2)", color: active ? "var(--accent)" : "var(--muted)", border: `1px solid ${active ? "var(--accent)" : "var(--border)"}` }}
+                    >
+                      <span className="font-semibold">{info[len].label}</span>
+                      <span style={{ fontSize: "10px", opacity: 0.8 }}>{info[len].sub}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        ))}
-        <div className="mt-4 text-[10px] text-[#333]">Analysis confidence: 97.3%</div>
-      </div>
-    ),
-    flip: false,
-  },
-  {
-    num: "02",
-    tag: "Script Engine",
-    title: "Full scripts.\nYour voice.",
-    body: "Enter your video topic. Choose YouTube long-form (5–20+ min) or Instagram Reels. The engine combines your Style DNA with proven psychological frameworks — hook mechanics, curiosity gaps, rehooks, emotional variety — to produce a complete, ready-to-record script.",
-    detail: [
-      "YouTube: short, medium, long-form",
-      "6 Instagram Reels templates",
-      "Hook alternatives on demand",
-      "One-click HTML export",
-    ],
-    visual: (
-      <div className="rounded-2xl border border-white/[0.07] bg-[#0d0d14] overflow-hidden w-full max-w-[380px]">
-        <div className="px-5 py-3 border-b border-white/[0.06] flex items-center justify-between">
-          <span className="text-[10px] font-bold text-[#7c5cfc] tracking-widest">GENERATED SCRIPT</span>
-          <span className="text-[10px] text-[#333]">YouTube · Medium · 12 min</span>
-        </div>
-        <div className="px-5 py-4 font-mono text-[12px] leading-[1.85] space-y-3">
-          <div>
-            <div className="text-[9px] text-[#7c5cfc] tracking-widest mb-1 font-bold">HOOK — 0:00</div>
-            <p className="text-[#ccc]">&quot;The productivity advice you&apos;ve been following is designed for a different era. Here&apos;s what works now.&quot;</p>
-          </div>
-          <div className="text-[#2a2a3a] italic text-[11px]">[Beat. Camera tight on face.]</div>
-          <div>
-            <div className="text-[9px] text-[#7c5cfc] tracking-widest mb-1 font-bold">REHOOK — 0:35</div>
-            <p className="text-[#888]">&quot;Stay with me, because what I&apos;m about to show you changed how I get more done in 4 hours than most people...&quot;</p>
-          </div>
-        </div>
-      </div>
-    ),
-    flip: true,
-  },
-  {
-    num: "03",
-    tag: "Persona System",
-    title: "Write like the\nbest in your field.",
-    body: "ScriptForge ships with complete scripting frameworks from proven creators. Thomas Graham's calm, proof-backed style. Alex Hormozi's dense value delivery. Apply their system to your content — their framework, your story, your voice.",
-    detail: [
-      "Thomas Graham: calm authority",
-      "Alex Hormozi: dense value (coming soon)",
-      "Custom personas: upload your guides",
-      "Framework + DNA blending",
-    ],
-    visual: (
-      <div className="space-y-3 w-full max-w-[380px]">
-        {[
-          {
-            name: "Thomas Graham",
-            tag: "Available",
-            desc: "Calm authority. Proof-backed claims. Zero hype. Educational depth with surgical precision.",
-            color: "#7c5cfc",
-          },
-          {
-            name: "Alex Hormozi",
-            tag: "Coming soon",
-            desc: "Dense value delivery. Bold claims. Math-backed frameworks. No-fluff monetization.",
-            color: "#f59e0b",
-          },
-        ].map((p) => (
-          <div
-            key={p.name}
-            className="rounded-xl border border-white/[0.06] bg-[#0d0d14] p-4"
+
+          {error && (
+            <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handleGenerate}
+            disabled={loading}
+            className="w-full rounded-xl py-3.5 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            style={{ background: "var(--accent)", color: "#fff", boxShadow: loading ? "none" : "0 0 28px var(--accent-glow)" }}
           >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-white font-semibold text-[14px]">{p.name}</span>
-              <span
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: `${p.color}20`, color: p.color }}
-              >
-                {p.tag}
-              </span>
-            </div>
-            <p className="text-[#555] text-[12px] leading-[1.6]">{p.desc}</p>
-          </div>
-        ))}
-      </div>
-    ),
-    flip: false,
-  },
-];
+            {loading ? (
+              <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block" />{platform === "reels" ? "Writing your reel…" : "Writing your script…"}</>
+            ) : (
+              <><span>✦</span> {platform === "reels" ? "Generate Reel Script" : "Generate Script"}</>
+            )}
+          </button>
 
-function FeatureSections() {
-  return (
-    <section id="features" className="bg-[#09090f]">
-      {FEATURE_SECTIONS.map((feat, i) => (
-        <FeaturePanel key={feat.num} feat={feat} index={i} />
-      ))}
-    </section>
-  );
-}
-
-function FeaturePanel({
-  feat,
-  index,
-}: {
-  feat: (typeof FEATURE_SECTIONS)[number];
-  index: number;
-}) {
-  const { ref, inView } = useInView(0.12);
-  const isLast = index === FEATURE_SECTIONS.length - 1;
-
-  return (
-    <div
-      className={`border-t border-white/[0.05] ${isLast ? "border-b" : ""}`}
-    >
-      <div
-        ref={ref}
-        className={`max-w-[1200px] mx-auto px-8 py-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center transition-all duration-700 ${
-          inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        }`}
-      >
-        {/* Text side */}
-        <div className={feat.flip ? "lg:order-2" : ""}>
-          <div className="flex items-baseline gap-4 mb-5">
-            <span className="text-[80px] font-black text-white/[0.04] leading-none tracking-[-4px] select-none">
-              {feat.num}
-            </span>
-            <span className="text-[11px] font-bold text-[#7c5cfc] tracking-[0.15em] uppercase">
-              {feat.tag}
-            </span>
-          </div>
-
-          <h2 className="text-[42px] md:text-[52px] font-black text-white tracking-[-2px] leading-[0.95] mb-6 whitespace-pre-line">
-            {feat.title}
-          </h2>
-
-          <p className="text-[#666] text-[16px] leading-[1.75] mb-8 max-w-[440px]">
-            {feat.body}
-          </p>
-
-          <ul className="space-y-3">
-            {feat.detail.map((d) => (
-              <li key={d} className="flex items-center gap-3 text-[14px] text-[#555]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                  <path d="M20 6L9 17l-5-5" stroke="#7c5cfc" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                {d}
-              </li>
-            ))}
-          </ul>
+          {script && (
+            <p className="text-center text-xs" style={{ color: "var(--muted)" }}>
+              Done —{" "}
+              <button onClick={handleCopy} className="underline" style={{ color: "var(--accent)" }}>copy to clipboard</button>
+              {" "}or scroll left to read
+            </p>
+          )}
         </div>
-
-        {/* Visual side */}
-        <div className={`flex ${feat.flip ? "lg:order-1 lg:justify-start" : "lg:justify-end"}`}>
-          {feat.visual}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Process ──────────────────────────────────────────────────────────────────
-
-function Process() {
-  const { ref, inView } = useInView();
-
-  return (
-    <section id="process" className="bg-[#09090f] py-28">
-      <div className="max-w-[1200px] mx-auto px-8">
-        <div
-          ref={ref}
-          className={`mb-16 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
-        >
-          <p className="text-[11px] font-bold text-[#7c5cfc] tracking-[0.15em] uppercase mb-4 flex items-center gap-3">
-            <span className="w-6 h-px bg-[#7c5cfc]" /> How it works
-          </p>
-          <h2 className="text-[48px] md:text-[60px] font-black text-white tracking-[-2.5px] leading-[0.92]">
-            Blank page to<br />
-            record-ready.<br />
-            <span className="text-[#444]">In three steps.</span>
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border border-white/[0.06] rounded-2xl overflow-hidden">
-          {[
-            {
-              n: "1",
-              title: "Upload Your Scripts",
-              desc: "Drop in 2–5 existing scripts. We run a deep forensic analysis to extract your writing fingerprint — vocabulary, rhythm, structure, tone.",
-              note: "Supports .docx, .txt, .md",
-            },
-            {
-              n: "2",
-              title: "Define Your Positioning",
-              desc: "Add your channel context, audience, credibility stack, and reference videos. Optionally scrape a competitor's channel to incorporate their positioning.",
-              note: "YouTube channel scraping included",
-            },
-            {
-              n: "3",
-              title: "Generate & Record",
-              desc: "Type your topic. Hit generate. Get a complete, production-ready script that sounds exactly like you wrote it on your best day.",
-              note: "Export as formatted HTML",
-            },
-          ].map((step, i) => (
-            <StepBlock key={step.n} step={step} index={i} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function StepBlock({
-  step,
-  index,
-}: {
-  step: { n: string; title: string; desc: string; note: string };
-  index: number;
-}) {
-  const { ref, inView } = useInView(0.1);
-
-  return (
-    <div
-      ref={ref}
-      className={`p-8 border-r border-white/[0.06] last:border-r-0 transition-all duration-700 ${
-        inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-      }`}
-      style={{ transitionDelay: `${index * 120}ms` }}
-    >
-      <div className="text-[56px] font-black text-white/[0.04] leading-none mb-6 select-none">
-        {step.n}
-      </div>
-      <h3 className="text-white font-bold text-[18px] tracking-[-0.3px] mb-3">
-        {step.title}
-      </h3>
-      <p className="text-[#555] text-[14px] leading-[1.7] mb-5">{step.desc}</p>
-      <p className="text-[11px] font-semibold text-[#7c5cfc] tracking-wide">
-        → {step.note}
-      </p>
-    </div>
-  );
-}
-
-// ─── Testimonials ─────────────────────────────────────────────────────────────
-
-const TESTIMONIALS = [
-  {
-    quote: "I uploaded three old scripts on a Tuesday night. By Wednesday morning I had a new video script that my editor said read better than anything I'd written myself. My watch time is up 40% this month.",
-    name: "Marcus Reid",
-    role: "Fitness & Nutrition Creator",
-    handle: "@marcusreidfitness",
-    metric: "+40% watch time",
-  },
-  {
-    quote: "The Thomas Graham style mode is insane. I've been trying to nail that calm, proof-backed tone for 2 years. ScriptForge got it on the first try. My comments are full of people asking how I changed my delivery.",
-    name: "James Okafor",
-    role: "Software & Tech Creator",
-    handle: "@jamesbuildstech",
-    metric: "2× comment rate",
-  },
-  {
-    quote: "I was skeptical about 'voice matching'. I am not skeptical anymore. It captured how I talk, the words I use, even how long my sentences run. Six months in and I've never written a script from scratch since.",
-    name: "Priya Sharma",
-    role: "Personal Finance Creator",
-    handle: "@priyamoneymatters",
-    metric: "3.8× subscriber growth",
-  },
-];
-
-function Testimonials() {
-  const { ref, inView } = useInView();
-
-  return (
-    <section className="bg-[#09090f] border-t border-white/[0.05] py-28">
-      <div className="max-w-[1200px] mx-auto px-8">
-        <div
-          ref={ref}
-          className={`flex items-end justify-between mb-14 gap-8 flex-wrap transition-all duration-700 ${
-            inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
-        >
-          <h2 className="text-[48px] md:text-[56px] font-black text-white tracking-[-2.5px] leading-[0.92]">
-            What creators<br />
-            are saying.
-          </h2>
-          <p className="text-[#444] text-[14px] max-w-[280px] leading-[1.7]">
-            847 creators trust ScriptForge to generate scripts that actually sound like them.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {TESTIMONIALS.map((t, i) => (
-            <TestimonialCard key={t.handle} t={t} index={i} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function TestimonialCard({
-  t,
-  index,
-}: {
-  t: (typeof TESTIMONIALS)[number];
-  index: number;
-}) {
-  const { ref, inView } = useInView(0.1);
-
-  return (
-    <div
-      ref={ref}
-      className={`rounded-2xl bg-[#0d0d14] border border-white/[0.06] p-7 flex flex-col gap-5 hover:border-white/[0.12] transition-all duration-500 ${
-        inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-      }`}
-      style={{ transitionDelay: `${index * 100}ms` }}
-    >
-      {/* Quote mark */}
-      <svg width="24" height="18" viewBox="0 0 24 18" fill="#7c5cfc" opacity="0.3">
-        <path d="M0 18V10.8C0 7.6 .8 5 2.4 3 4 1 6.2 0 9 0l1.5 2.4C8.7 2.8 7.3 3.6 6.3 5c-1 1.3-1.5 2.8-1.5 4.5H9V18H0zm13.5 0V10.8c0-3.2.8-5.8 2.4-7.8C17.5 1 19.7 0 22.5 0L24 2.4c-1.8.4-3.2 1.2-4.2 2.6-1 1.3-1.5 2.8-1.5 4.5h4.2V18H13.5z" />
-      </svg>
-
-      <p className="text-[#aaa] text-[14px] leading-[1.8] flex-1">{t.quote}</p>
-
-      <div className="border-t border-white/[0.05] pt-5 flex items-center justify-between">
-        <div>
-          <div className="text-white font-semibold text-[14px]">{t.name}</div>
-          <div className="text-[#444] text-[12px] mt-0.5">{t.role}</div>
-        </div>
-        <div className="text-right">
-          <div className="text-[#7c5cfc] font-bold text-[13px]">{t.metric}</div>
-          <div className="text-[#333] text-[11px] mt-0.5">{t.handle}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Pricing ──────────────────────────────────────────────────────────────────
-
-const PLANS = [
-  {
-    name: "Starter",
-    price: 49,
-    desc: "For creators testing a new approach.",
-    features: ["25 scripts / month", "YouTube + Reels", "Style DNA", "Persona frameworks", "HTML export"],
-    cta: "Get Started",
-    highlight: false,
-  },
-  {
-    name: "Creator",
-    price: 99,
-    desc: "For creators who publish consistently.",
-    features: ["Unlimited scripts", "All platforms", "Advanced Style DNA", "All personas", "Hook alternatives", "Channel scraping", "Priority generation"],
-    cta: "Start Creating",
-    highlight: true,
-    badge: "Most Popular",
-  },
-  {
-    name: "Studio",
-    price: 249,
-    desc: "For agencies managing multiple creators.",
-    features: ["Everything in Creator", "10 creator profiles", "Team access", "White-label export", "Custom personas", "API access", "Account manager"],
-    cta: "Contact Sales",
-    highlight: false,
-  },
-];
-
-function Pricing() {
-  const { ref, inView } = useInView();
-
-  return (
-    <section id="pricing" className="bg-[#09090f] border-t border-white/[0.05] py-28">
-      <div className="max-w-[1200px] mx-auto px-8">
-        <div
-          ref={ref}
-          className={`mb-14 transition-all duration-700 ${inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}
-        >
-          <p className="text-[11px] font-bold text-[#7c5cfc] tracking-[0.15em] uppercase mb-4 flex items-center gap-3">
-            <span className="w-6 h-px bg-[#7c5cfc]" /> Pricing
-          </p>
-          <h2 className="text-[48px] md:text-[56px] font-black text-white tracking-[-2.5px] leading-[0.92]">
-            One video that lands<br />
-            <span className="text-[#444]">pays for years.</span>
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {PLANS.map((plan, i) => (
-            <PlanCard key={plan.name} plan={plan} index={i} />
-          ))}
-        </div>
-
-        <p className="text-center text-[#333] text-[13px] mt-8">
-          All plans include a 14-day free trial. Cancel any time.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function PlanCard({
-  plan,
-  index,
-}: {
-  plan: (typeof PLANS)[number];
-  index: number;
-}) {
-  const { ref, inView } = useInView(0.1);
-
-  return (
-    <div
-      ref={ref}
-      className={`relative rounded-2xl p-7 transition-all duration-700 hover:scale-[1.01] ${
-        inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-      } ${
-        plan.highlight
-          ? "bg-[#0f0d1f] border-2 border-[#7c5cfc]/40 shadow-[0_0_60px_rgba(124,92,252,0.12)]"
-          : "bg-[#0d0d14] border border-white/[0.06]"
-      }`}
-      style={{ transitionDelay: `${index * 100}ms` }}
-    >
-      {plan.highlight && (
-        <div className="absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-[#7c5cfc] to-transparent" />
-      )}
-
-      {"badge" in plan && plan.badge && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-[#7c5cfc] text-white text-[11px] font-bold">
-          {plan.badge}
-        </div>
-      )}
-
-      <div className="mb-6">
-        <h3 className="text-white font-bold text-[16px] mb-1">{plan.name}</h3>
-        <p className="text-[#444] text-[13px]">{plan.desc}</p>
-      </div>
-
-      <div className="flex items-baseline gap-1 mb-7">
-        <span className="text-white font-black text-[48px] tracking-[-2px] leading-none">
-          ${plan.price}
-        </span>
-        <span className="text-[#444] text-[14px]">/mo</span>
-      </div>
-
-      <Link
-        href="/studio"
-        className={`block w-full h-11 rounded-xl text-center font-bold text-[14px] leading-[44px] transition-all duration-200 mb-7 ${
-          plan.highlight
-            ? "bg-[#7c5cfc] text-white hover:bg-[#6b4eeb] hover:shadow-[0_0_24px_rgba(124,92,252,0.45)]"
-            : "bg-white/[0.05] text-white border border-white/[0.08] hover:bg-white/[0.09]"
-        }`}
-      >
-        {plan.cta}
-      </Link>
-
-      <ul className="space-y-3">
-        {plan.features.map((f) => (
-          <li key={f} className="flex items-center gap-3 text-[13px]">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-              <path d="M20 6L9 17l-5-5" stroke={plan.highlight ? "#7c5cfc" : "#444"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className={plan.highlight ? "text-[#bbb]" : "text-[#555]"}>{f}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-// ─── CTA ──────────────────────────────────────────────────────────────────────
-
-function CTA() {
-  const { ref, inView } = useInView();
-
-  return (
-    <section className="bg-[#09090f] border-t border-white/[0.05] py-28 relative overflow-hidden">
-      {/* Grid bg */}
-      <div
-        className="absolute inset-0 opacity-[0.025] pointer-events-none"
-        style={{
-          backgroundImage: "radial-gradient(circle at 1px 1px, #7c5cfc 1px, transparent 0)",
-          backgroundSize: "44px 44px",
-        }}
-      />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(124,92,252,0.07)_0%,transparent_65%)] pointer-events-none" />
-
-      <div
-        ref={ref}
-        className={`max-w-[800px] mx-auto px-8 text-center transition-all duration-700 ${
-          inView ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"
-        }`}
-      >
-        <p className="text-[11px] font-bold text-[#7c5cfc] tracking-[0.15em] uppercase mb-6 flex items-center justify-center gap-3">
-          <span className="w-6 h-px bg-[#7c5cfc]" /> Get started today
-          <span className="w-6 h-px bg-[#7c5cfc]" />
-        </p>
-        <h2
-          className="font-black text-white leading-[0.9] tracking-[-3px] mb-8"
-          style={{ fontSize: "clamp(52px, 7vw, 86px)" }}
-        >
-          Stop staring at<br />
-          a blank page.
-        </h2>
-        <p className="text-[#555] text-[17px] leading-[1.7] mb-10 max-w-[480px] mx-auto">
-          Your next script is one click away. Sounds like you. Converts like it was engineered for your audience.
-        </p>
-        <Link
-          href="/studio"
-          className="inline-flex items-center gap-3 h-14 px-8 rounded-2xl bg-white text-[#09090f] font-black text-[15px] hover:bg-white/90 transition-all duration-200 hover:scale-[1.04] hover:shadow-[0_0_60px_rgba(255,255,255,0.15)] active:scale-[0.98]"
-        >
-          Generate My First Script
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
-        <p className="text-[#333] text-[13px] mt-5">
-          Free to start · No credit card · Your first script in 60 seconds
-        </p>
-      </div>
-    </section>
-  );
-}
-
-// ─── Footer ───────────────────────────────────────────────────────────────────
-
-function Footer() {
-  return (
-    <footer className="border-t border-white/[0.05] bg-[#09090f] py-8">
-      <div className="max-w-[1200px] mx-auto px-8 flex flex-col sm:flex-row items-center justify-between gap-5">
-        <div className="flex items-center gap-2.5">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="18" height="18" rx="3" fill="#7c5cfc" opacity="0.2" />
-            <path d="M7 8h10M7 12h10M7 16h6" stroke="#7c5cfc" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-          <span className="text-[#444] font-semibold text-[13px]">ScriptForge</span>
-        </div>
-        <div className="flex items-center gap-8">
-          {[["Features", "#features"], ["Process", "#process"], ["Pricing", "#pricing"]].map(([l, h]) => (
-            <a key={l} href={h} className="text-[#333] hover:text-white text-[13px] transition-colors">
-              {l}
-            </a>
-          ))}
-          <Link href="/studio" className="text-[#7c5cfc] hover:text-[#a78bfa] text-[13px] font-semibold transition-colors">
-            App →
-          </Link>
-        </div>
-        <p className="text-[#2a2a3a] text-[12px]">
-          © {new Date().getFullYear()} ScriptForge
-        </p>
-      </div>
-    </footer>
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-export default function LandingPage() {
-  return (
-    <>
-      {/* Film grain overlay */}
-      <div
-        className="pointer-events-none fixed inset-0 z-[9997] opacity-[0.028]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-          backgroundRepeat: "repeat",
-          backgroundSize: "128px 128px",
-        }}
-      />
-
-      <Cursor />
-
-      <main className="bg-[#09090f] overflow-x-hidden">
-        <Navbar />
-        <Hero />
-        <FeatureSections />
-        <Process />
-        <Testimonials />
-        <Pricing />
-        <CTA />
-        <Footer />
       </main>
-    </>
+    </div>
   );
 }

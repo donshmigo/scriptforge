@@ -21,13 +21,13 @@ export interface ScrapeResult {
 
 export async function POST(req: NextRequest) {
   try {
-    const { channelUrl } = await req.json();
+    const { channelUrl, apiKey } = await req.json();
 
-    if (!channelUrl?.trim()) {
-      return NextResponse.json({ error: "Channel URL is required." }, { status: 400 });
+    if (!channelUrl?.trim() || !apiKey?.trim()) {
+      return NextResponse.json({ error: "Channel URL and API key are required." }, { status: 400 });
     }
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI({ apiKey });
 
     // Normalize URL
     let url = channelUrl.trim();
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Try to parse ytInitialData for structured video list
-        const ytDataMatch = vtHtml.match(/var ytInitialData = (\{[\s\S]+?\});\s*<\/script>/);
+        const ytDataMatch = vtHtml.match(/var ytInitialData = (\{.+?\});\s*<\/script>/s);
         if (ytDataMatch?.[1]) {
           try {
             const ytData = JSON.parse(ytDataMatch[1]);
