@@ -196,14 +196,17 @@ export default function Home() {
   }, []);
 
   const persistAll = useCallback(
-    (profile: CreatorProfile, style: StyleProfile | null, key: string, antKey?: string, iGuide?: string, sGuide?: string) => {
+    (profile: CreatorProfile, style: StyleProfile | null, key?: string, antKey?: string, iGuide?: string, sGuide?: string) => {
       setCreatorProfile(profile);
       setStyleProfile(style);
-      setApiKey(key);
       localStorage.setItem(LS_PROFILE, JSON.stringify(profile));
       if (style) localStorage.setItem(LS_STYLE, JSON.stringify(style));
       else localStorage.removeItem(LS_STYLE);
-      localStorage.setItem(LS_KEY, key);
+      if (key !== undefined) {
+        setApiKey(key);
+        if (key) localStorage.setItem(LS_KEY, key);
+        else localStorage.removeItem(LS_KEY);
+      }
       if (antKey !== undefined) {
         setAnthropicApiKey(antKey);
         if (antKey) localStorage.setItem(LS_ANT_KEY, antKey);
@@ -235,8 +238,8 @@ export default function Home() {
   }, []);
 
   const handleOnboardingComplete = useCallback(
-    (profile: CreatorProfile, style: StyleProfile | null, key: string) => {
-      persistAll(profile, style, key);
+    (profile: CreatorProfile, style: StyleProfile | null) => {
+      persistAll(profile, style);
     },
     [persistAll]
   );

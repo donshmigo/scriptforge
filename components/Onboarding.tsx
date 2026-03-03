@@ -8,8 +8,7 @@ import { PERSONAS, type Persona } from "@/lib/personas";
 interface OnboardingProps {
   onComplete: (
     profile: CreatorProfile,
-    styleProfile: StyleProfile | null,
-    apiKey: string
+    styleProfile: StyleProfile | null
   ) => void;
 }
 
@@ -23,7 +22,6 @@ interface FormData {
   contraryBelief: string;
   targetPerson: string;
   contentStyle: ContentStyle;
-  apiKey: string;
   // new creator extras
   topic: string;
   background: string;
@@ -38,7 +36,6 @@ const EMPTY_FORM: FormData = {
   contraryBelief: "",
   targetPerson: "",
   contentStyle: "talking-head",
-  apiKey: "",
   topic: "",
   background: "",
   proof: "",
@@ -187,16 +184,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       setStep(2);
       return;
     }
-    if (!form.apiKey.trim()) {
-      setScrapeError("Enter your OpenAI API key so we can analyze the channel.");
-      return;
-    }
     setScrapeLoading(true);
     try {
       const res = await fetch("/api/scrape-channel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channelUrl: form.channelUrl, apiKey: form.apiKey }),
+        body: JSON.stringify({ channelUrl: form.channelUrl, apiKey: "" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -219,7 +212,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       setScrapeLoading(false);
       setStep(2);
     }
-  }, [form.channelUrl, form.apiKey]);
+  }, [form.channelUrl]);
 
   // ── File upload ──────────────────────────────────────────────────────────────
   const handleFileUpload = useCallback(async (files: FileList | null) => {
@@ -248,7 +241,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
   // ── Analyze — runs style DNA + identity extraction in parallel ────────────────
   const handleAnalyze = useCallback(async () => {
-    if (!form.apiKey.trim()) { setError("API key is required to analyze scripts."); return; }
     if (pendingScripts.length === 0) { setError("Add at least one script before analyzing."); return; }
     setAnalyzeLoading(true);
     setAnalyzeStatus("Running deep style analysis and extracting your positioning…");
@@ -259,7 +251,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           scripts: pendingScripts.map((s) => ({ name: s.name, text: s.text })),
-          apiKey: form.apiKey,
+          apiKey: "",
         }),
       });
       const data = await res.json();
@@ -303,11 +295,11 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       setAnalyzeLoading(false);
       setAnalyzeStatus("");
     }
-  }, [form.apiKey, pendingScripts, next]);
+  }, [pendingScripts, next]);
 
   // ── New creator step 4 (optional analysis before finish) ─────────────────────
   const handleNewStep4Continue = useCallback(async () => {
-    if (pendingScripts.length > 0 && !styleProfile && form.apiKey.trim()) {
+    if (pendingScripts.length > 0 && !styleProfile) {
       // Trigger analysis but don't block — just go to done
       setAnalyzeLoading(true);
       setError("");
@@ -317,7 +309,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             scripts: pendingScripts.map((s) => ({ name: s.name, text: s.text })),
-            apiKey: form.apiKey,
+            apiKey: "",
           }),
         });
         const data = await res.json();
@@ -338,7 +330,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       }
     }
     next();
-  }, [pendingScripts, styleProfile, form.apiKey, next]);
+  }, [pendingScripts, styleProfile, next]);
 
   // ── handleComplete ────────────────────────────────────────────────────────────
   const handleComplete = useCallback(() => {
@@ -355,7 +347,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       contentStyle: form.contentStyle,
       completedAt: Date.now(),
     };
-    onComplete(profile, styleProfile, form.apiKey);
+    onComplete(profile, styleProfile);
   }, [path, form, styleProfile, onComplete]);
 
   // ── Step renderers ───────────────────────────────────────────────────────────
@@ -468,7 +460,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       <div>
         <h2 className="text-xl font-bold mb-1" style={{ color: "var(--foreground)" }}>Let's set up your profile</h2>
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Enter your channel URL and API key — we'll scrape your channel and pre-fill your identity profile automatically.
+          Enter your channel URL — we'll scrape your channel and pre-fill your identity profile automatically.
         </p>
       </div>
 
@@ -488,12 +480,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           placeholder="https://youtube.com/@yourhandle"
         />
         <Hint>We fetch your channel name, description, and recent video titles to pre-fill your positioning profile.</Hint>
-      </div>
-
-      <div>
-        <Label>OpenAI API Key <span style={{ color: "var(--red)" }}>*</span></Label>
-        <StyledInput type="password" value={form.apiKey} onChange={(v) => set("apiKey", v)} placeholder="sk-..." />
-        <Hint>platform.openai.com → API Keys. Stored locally only — never sent to any server except OpenAI.</Hint>
       </div>
 
       {scrapeError && (
@@ -522,7 +508,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         const scrapeRes = await fetch("/api/scrape-channel", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ channelUrl: channelUrlToUse, apiKey: form.apiKey }),
+          body: JSON.stringify({ channelUrl: channelUrlToUse, apiKey: "" }),
         });
         const scrapeData = await scrapeRes.json();
         if (!scrapeRes.ok) throw new Error(scrapeData.error || "Could not reach channel.");
@@ -571,7 +557,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     } finally {
       setTranscriptLoading(false);
     }
-  }, [scrapedVideos, form.channelUrl, form.apiKey]);
+  }, [scrapedVideos, form.channelUrl]);
 
   const renderExpC = () => (
     <div className="flex flex-col gap-5">
@@ -894,12 +880,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     <div className="flex flex-col gap-5">
       <div>
         <h2 className="text-xl font-bold mb-1" style={{ color: "var(--foreground)" }}>Almost done</h2>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>Add your API key. Optionally upload reference scripts from creators you admire — the AI adopts their structural patterns while keeping your identity.</p>
-      </div>
-      <div>
-        <Label>OpenAI API Key <span style={{ color: "var(--red)" }}>*</span></Label>
-        <StyledInput type="password" value={form.apiKey} onChange={(v) => set("apiKey", v)} placeholder="sk-..." />
-        <Hint>platform.openai.com → API Keys. Stored locally only.</Hint>
+        <p className="text-sm" style={{ color: "var(--muted)" }}>Optionally upload reference scripts from creators you admire — the AI adopts their structural patterns while keeping your identity.</p>
       </div>
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
@@ -937,7 +918,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       {pendingScripts.length > 0 && (
         <button
           onClick={handleNewStep4Continue}
-          disabled={analyzeLoading || !form.apiKey.trim()}
+          disabled={analyzeLoading}
           className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
           style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border-light)" }}
         >
@@ -965,7 +946,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         {[
           { label: "Identity & Positioning", done: true },
           { label: "Style DNA from scripts", done: !!styleProfile },
-          { label: "API Key", done: !!form.apiKey },
         ].map(({ label, done }) => (
           <div key={label} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
             <span className="text-sm" style={{ color: done ? "var(--green)" : "var(--border-light)" }}>{done ? "✓" : "○"}</span>
@@ -982,8 +962,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   // ── Validation ───────────────────────────────────────────────────────────────
   const canAdvance = (): boolean => {
     if (path === "experienced") {
-      // step 1: name + apiKey required (channel URL optional)
-      if (step === 1) return !!form.name.trim() && !!form.apiKey.trim();
+      // step 1: name required (channel URL and API key optional)
+      if (step === 1) return !!form.name.trim();
       // step 2: review identity — always continuable
       if (step === 2) return true;
       // step 3: upload+analyze — analyze button handles advancement directly
@@ -993,7 +973,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       if (step === 1) return !!form.topic.trim() && !!form.background.trim() && !!form.proof.trim();
       if (step === 2) return !!form.contraryBelief.trim() && !!form.targetPerson.trim() && !!form.uniqueMethod.trim();
       if (step === 3) return true;
-      if (step === 4) return !!form.apiKey.trim();
+      if (step === 4) return true;
     }
     return false;
   };
