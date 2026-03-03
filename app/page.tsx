@@ -261,10 +261,7 @@ export default function Home() {
   }, []);
 
   const handleGenerate = useCallback(async () => {
-    if (!anthropicApiKey.trim() && !apiKey.trim()) {
-      setError("No API key found. Add your Anthropic key in Edit Profile → API Keys.");
-      return;
-    }
+    // API keys are optional on the client — server uses env vars as fallback
     if (!videoTitle.trim()) { setError("Please enter a video title."); return; }
     if (!creatorProfile) { setError("Creator profile not found. Please complete onboarding."); return; }
 

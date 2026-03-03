@@ -11,8 +11,9 @@ export async function POST(req: NextRequest) {
   try {
     const body: AnalyzeRequest = await req.json();
     const { scripts, apiKey } = body;
+    const resolvedKey = apiKey?.trim() || process.env.OPENAI_API_KEY || "";
 
-    if (!apiKey) {
+    if (!resolvedKey) {
       return NextResponse.json({ error: "OpenAI API key is required." }, { status: 400 });
     }
 
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No scripts provided." }, { status: 400 });
     }
 
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({ apiKey: resolvedKey });
 
     // Cap each transcript at 6,000 words to stay well inside TPM limits.
     // YouTube transcripts can be 4–8k words each; 10 × 8k = ~80k tokens input alone.

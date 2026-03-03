@@ -22,12 +22,13 @@ export interface ScrapeResult {
 export async function POST(req: NextRequest) {
   try {
     const { channelUrl, apiKey } = await req.json();
+    const resolvedKey = apiKey?.trim() || process.env.OPENAI_API_KEY || "";
 
-    if (!channelUrl?.trim() || !apiKey?.trim()) {
+    if (!channelUrl?.trim() || !resolvedKey) {
       return NextResponse.json({ error: "Channel URL and API key are required." }, { status: 400 });
     }
 
-    const openai = new OpenAI({ apiKey });
+    const openai = new OpenAI({ apiKey: resolvedKey });
 
     // Normalize URL
     let url = channelUrl.trim();

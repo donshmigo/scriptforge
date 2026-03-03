@@ -74,9 +74,13 @@ export async function POST(req: NextRequest) {
       anthropicApiKey,
     } = body;
 
-    if (!anthropicApiKey && !apiKey) {
+    // Fall back to server-side env vars — client-provided keys take precedence
+    const resolvedAnthropicKey = anthropicApiKey?.trim() || process.env.ANTHROPIC_API_KEY || "";
+    const resolvedOpenAiKey    = apiKey?.trim()          || process.env.OPENAI_API_KEY    || "";
+
+    if (!resolvedAnthropicKey && !resolvedOpenAiKey) {
       return NextResponse.json(
-        { error: "An API key is required. Add your Anthropic key in Edit Profile → API Keys." },
+        { error: "No API key configured. Add your Anthropic key in Edit Profile → API Keys." },
         { status: 400 }
       );
     }
@@ -84,7 +88,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Video title is required." }, { status: 400 });
     }
 
-    const useAnthropic = !!anthropicApiKey?.trim();
+    const useAnthropic = !!resolvedAnthropicKey;
     const isReels = platform === "reels";
     const lengthTable = isReels ? REELS_LENGTH_TARGETS : YOUTUBE_LENGTH_TARGETS;
     const lengthTarget = lengthTable[scriptLength] ?? lengthTable.medium;
@@ -319,7 +323,7 @@ Write the complete script now:`;
     let raw = "";
 
     if (useAnthropic) {
-      const anthropic = new Anthropic({ apiKey: anthropicApiKey });
+      const anthropic = new Anthropic({ apiKey: resolvedAnthropicKey });
       const message = await withRetry(() =>
         anthropic.messages.create({
           model: "claude-sonnet-4-6",
@@ -331,7 +335,7 @@ Write the complete script now:`;
       );
       raw = (message.content[0] as { type: string; text: string })?.text ?? "";
     } else {
-      const openai = new OpenAI({ apiKey });
+      const openai = new OpenAI({ apiKey: resolvedOpenAiKey });
       const completion = await withRetry(() =>
         openai.chat.completions.create({
           model: "gpt-4o",
