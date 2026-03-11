@@ -8,7 +8,8 @@ import { WRITING_STYLES, type WritingStyle } from "@/lib/personas";
 interface OnboardingProps {
   onComplete: (
     profile: CreatorProfile,
-    styleProfile: StyleProfile | null
+    styleProfile: StyleProfile | null,
+    styleId?: string
   ) => void;
 }
 
@@ -129,6 +130,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [error, setError] = useState("");
   const [selectedPersona, setSelectedPersona] = useState<WritingStyle | null>(WRITING_STYLES.find(s => s.available) ?? null);
+  const [isCustomSelected, setIsCustomSelected] = useState(false);
 
   // Channel scrape state
   const [scrapeLoading, setScrapeLoading] = useState(false);
@@ -175,6 +177,31 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     }
     setStep(1);
   };
+
+  // ── Step 0 Continue ──────────────────────────────────────────────────────────
+  // Pre-made style → save style ID + complete immediately (no setup required).
+  // Custom → launch the experienced setup flow (channel scrape + identity + style DNA).
+  const handleStep0Continue = useCallback(() => {
+    if (isCustomSelected) {
+      selectPath("experienced");
+      return;
+    }
+    if (!selectedPersona) return;
+    // Complete onboarding with a blank profile — user can fill in via Edit Profile.
+    // Pass the styleId so page.tsx can update React state immediately.
+    onComplete({
+      path: "experienced",
+      name: "",
+      channelUrl: "",
+      credibilityStack: "",
+      uniqueMethod: "",
+      contraryBelief: "",
+      targetPerson: "",
+      contentStyle: "talking-head",
+      completedAt: Date.now(),
+    }, null, selectedPersona.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCustomSelected, selectedPersona, onComplete]);
 
   // ── Channel scrape (experienced step 1 → 2) ─────────────────────────────────
   const handleScrapeAndAdvance = useCallback(async () => {
@@ -353,29 +380,33 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   // ── Step renderers ───────────────────────────────────────────────────────────
 
   const renderPathSelect = () => (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-7">
 
       {/* Hero */}
       <div className="text-center">
         <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl mx-auto mb-4" style={{ background: "var(--accent-glow)", border: "1px solid rgba(124,92,252,0.3)" }}>▶</div>
         <h1 className="text-2xl font-bold mb-2" style={{ color: "var(--foreground)" }}>Welcome to ScriptForge</h1>
         <p className="text-sm leading-6 max-w-md mx-auto" style={{ color: "var(--muted)" }}>
-          Choose a writing framework, then tell us about yourself — a one-time setup that makes every script sound unmistakably like you.
+          Pick a writing style and start generating scripts immediately. Or set up a custom profile to make every script sound unmistakably like you.
         </p>
       </div>
 
       {/* Writing style picker */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest mb-3 text-center" style={{ color: "var(--muted)" }}>Choose a Writing Style</p>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--muted)" }}>Choose a Writing Style</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {WRITING_STYLES.map((style) => {
-            const isSelected = selectedPersona?.id === style.id;
+            const isSelected = !isCustomSelected && selectedPersona?.id === style.id;
             return (
               <button
                 key={style.id}
                 disabled={!style.available}
-                onClick={() => style.available && setSelectedPersona(style)}
-                className="relative rounded-2xl p-5 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  if (!style.available) return;
+                  setSelectedPersona(style);
+                  setIsCustomSelected(false);
+                }}
+                className="relative rounded-2xl p-4 text-left transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{
                   background: isSelected ? "var(--accent-glow)" : "var(--surface-2)",
                   border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
@@ -389,10 +420,10 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 {isSelected && (
                   <span className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "var(--accent)", color: "#fff" }}>✓</span>
                 )}
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2.5">
                   <div
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    style={{ background: style.color + "22", color: style.color }}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    style={{ background: isSelected ? style.color : style.color + "22", color: isSelected ? "#fff" : style.color }}
                   >
                     {style.avatar}
                   </div>
@@ -402,11 +433,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 </div>
                 <p className="text-sm font-semibold mb-0.5" style={{ color: isSelected ? "var(--accent)" : "var(--foreground)" }}>{style.name}</p>
                 <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>{style.tagline}</p>
-                {isSelected && style.identity.name && (
-                  <p className="text-xs mt-2 leading-4" style={{ color: "var(--accent)", opacity: 0.8 }}>
-                    Identity pre-filled from this style ↓
-                  </p>
-                )}
               </button>
             );
           })}
@@ -416,43 +442,44 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       {/* Divider */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-        <span className="text-xs" style={{ color: "var(--muted)" }}>Now tell us about you</span>
+        <span className="text-xs" style={{ color: "var(--border-light)" }}>or</span>
         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
       </div>
 
-      {/* Path cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {[
-          {
-            p: "experienced" as Path,
-            icon: "🎬",
-            title: "I've made content before",
-            desc: "Upload your existing scripts — AI extracts your voice, style, and positioning automatically",
-            cta: "Get started →",
-          },
-          {
-            p: "new" as Path,
-            icon: "🌱",
-            title: "I'm just starting out",
-            desc: "Answer a few questions and we'll build your authority profile from scratch",
-            cta: "Get started →",
-          },
-        ].map(({ p, icon, title, desc, cta }) => (
-          <button
-            key={p!}
-            onClick={() => selectPath(p)}
-            className="rounded-2xl p-5 text-left transition-all group"
-            style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-          >
-            <div className="text-2xl mb-3">{icon}</div>
-            <p className="text-sm font-semibold mb-1" style={{ color: "var(--foreground)" }}>{title}</p>
-            <p className="text-xs leading-5 mb-3" style={{ color: "var(--muted)" }}>{desc}</p>
-            <span className="text-xs font-semibold" style={{ color: "var(--accent)" }}>{cta}</span>
-          </button>
-        ))}
-      </div>
+      {/* Custom setup option */}
+      <button
+        onClick={() => { setIsCustomSelected(true); setSelectedPersona(null); }}
+        className="w-full rounded-2xl p-4 text-left transition-all"
+        style={{
+          background: isCustomSelected ? "var(--accent-glow)" : "var(--surface-2)",
+          border: `1px solid ${isCustomSelected ? "var(--accent)" : "var(--border)"}`,
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+              ⚙️
+            </div>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: isCustomSelected ? "var(--accent)" : "var(--foreground)" }}>Custom Setup</p>
+              <p className="text-xs leading-4 mt-0.5" style={{ color: "var(--muted)" }}>Connect your channel, upload scripts, extract your voice and positioning</p>
+            </div>
+          </div>
+          {isCustomSelected && (
+            <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ background: "var(--accent)", color: "#fff" }}>✓</span>
+          )}
+        </div>
+      </button>
+
+      {/* Continue */}
+      <button
+        onClick={handleStep0Continue}
+        disabled={!selectedPersona && !isCustomSelected}
+        className="w-full rounded-xl py-3.5 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+        style={{ background: "var(--accent)", color: "#fff", boxShadow: (!selectedPersona && !isCustomSelected) ? "none" : "0 0 24px var(--accent-glow)" }}
+      >
+        {isCustomSelected ? "Set Up My Profile →" : "Start Writing →"}
+      </button>
 
     </div>
   );
@@ -949,7 +976,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       </div>
       <div className="w-full max-w-sm flex flex-col gap-2.5 text-left">
         {[
-          { label: "Identity & Positioning", done: true },
+          { label: "Identity & Positioning", done: !!form.name || !!form.credibilityStack },
           { label: "Style DNA from scripts", done: !!styleProfile },
         ].map(({ label, done }) => (
           <div key={label} className="flex items-center gap-3 px-4 py-3 rounded-xl" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
@@ -1001,14 +1028,14 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     return null;
   };
 
-  // Experienced step 1 uses the scrape handler instead of plain next()
+  // Custom (experienced) path step helpers
   const isExpStep1 = path === "experienced" && step === 1;
   const isAnalyzeStep = path === "experienced" && step === 3;
   const isNewOptionalAnalyze = path === "new" && step === 4;
   const showNavBar = step > 0 && step < 5;
 
-  // Progress dots: experienced = 3 steps, new = 4 steps
-  const totalDots = path === "experienced" ? 3 : 4;
+  // Progress dots: 3 steps for custom/experienced path
+  const totalDots = path === "new" ? 4 : 3;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto" style={{ background: "rgba(10,10,14,0.97)", backdropFilter: "blur(8px)" }}>

@@ -238,8 +238,18 @@ export default function Home() {
   }, []);
 
   const handleOnboardingComplete = useCallback(
-    (profile: CreatorProfile, style: StyleProfile | null) => {
+    (profile: CreatorProfile, style: StyleProfile | null, styleId?: string) => {
       persistAll(profile, style);
+      // If a pre-made writing style was selected in onboarding, apply it immediately
+      if (styleId) {
+        const writingStyle = getWritingStyle(styleId);
+        setPersonaId(styleId);
+        localStorage.setItem(LS_WRITING_STYLE, styleId);
+        const hasCustomIntro  = !!localStorage.getItem(LS_INTRO_GUIDE);
+        const hasCustomScript = !!localStorage.getItem(LS_SCRIPT_GUIDE);
+        if (!hasCustomIntro)  setIntroGuide(writingStyle.introGuide);
+        if (!hasCustomScript) setScriptGuide(writingStyle.scriptGuide);
+      }
     },
     [persistAll]
   );
