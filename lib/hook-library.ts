@@ -1,0 +1,530 @@
+
+export const HOOK_LIBRARY = `
+# Educational Hooks
+- I need someone to explain this because this (insert item / action) doesn't make any sense.
+- Want to know how much (insert adjective/description) (insert item/action) are today than [insert older time frame]? check this out.
+- Check this out!
+- (Insert item/action) sounds insane but I'm gonna explain why it's actually true
+- This is crazy. Check this out!
+- I just found out that that if you (insert action) and it (insert result) you likely (insert reason)
+- I just found out about (Insert item/action)
+- I just found what might possibly be best thing ever!
+- I just learned the cutest thing in the whole wide world and I refuse to keep it to myself.
+- I just learned quite possibly the cutest thing I ever heard in my entire life.
+- Not many people know this but
+- You're not alone, many people don't know about (Insert item/action) so hopefully this video helps you understand
+- (Insert noun) that keeps me up at night
+- Hey! Do you think you're (Insert action) correctly or you're gonna hate me in [Insert Time Frame]
+- Let's talk about
+- This video may not seem as much but
+- Here's a question. How do you (insert action) so it can (Insert result)
+- Here's a fun fact.
+- Am I the only one that didnt realize why
+- (Insert action/item) is a lot more interesting than you realize
+- Y'all not ready for what I'm about to show you.
+- Apparently, you can tell if (Insert noun) has (Insert item 1) or (Insert item 2)
+- Here's some unspoken (Insert action/item) knowledge for you to know so (insert desired result)
+- What happens when you (insert action)
+- Nobody has talked about this before. I have never seen this. Do you have any idea what (Insert item/action) is
+- Let's fuck you up with one of the deepest concepts you've never thought about.
+- I have some very good news.
+- This news has been making headlines.
+- You aint gonna believe this / You wont gonna believe this
+- You will not believe me if I told you that
+- It's time for me to admit.
+- Did you know the differences between the (Insert # of things)
+- Have you ever noticed how
+- Dont you ever wondered why (Insert action/item) (Insert description/function)?
+- Have you ever wondered why (Insert action/item) is (Insert description/funcition)?
+- Have you ever wondered how does (Insert item/action) (insert desired result)?
+- If you ever wondered what (Insert noun) when they (insert action)? Today is your lucky day.
+- Have you ever wondered
+- Would you believe me if I told you that (Insert item/action) could (insert desired result) in just [Insert Time Frame]? I know it sounds like a scam, but I promise you, it's not.
+- What if I told you (Insert noun) was (insert action) to (Insert desired result).
+- What if I told you that (insert desired result) when (Insert action)
+- What if I told you that using (Insert Item #1) is (insert description/adjective) than (Insert Item #2)
+- What if I told you that
+- Did you know that it is actually (Insert adjective) to (Insert action)
+- Did you know that if you (Insert action), (Insert desired result)
+- Did you know that
+- Did you know that (Insert item/action) can (Insert desired result)
+- (Insert facts) I guarantee you didnt know.
+- I was [Insert Time Frame] when (insert person) convinced me that (insert facts). What does it actually mean?
+- I was today's years old when I found out
+- I don't know who needs to hear this today but
+- In [Insert Time Frame] Im gonna teach you everything about
+- Here's why you should
+- I'd like to show you an example of
+- This is so nerdy, but the coolest thing I've ever done.
+- This is pretty nuts. It is possible to (insert desired result) without
+- I just saw something completely horrifying and if I had to see this, so do you
+- This is what happens when you
+- I shouldn't be saying this but Im gonna tell you something about (Insert field/topic/niche) that no one wants to tell you.
+- I know this weird fact about (Insert field/topic/niche) and I hate to do this to you but now we're all gonna know it
+- Hear me out here for a second / Hear me out
+- Have you guys ever seen (Insert item). You want to? Check this out.
+- Just a reminder that
+- This is your reminder that
+- Somebody said to me,
+- (insert point/item) that just make sense
+- Here's (insert noun) that might surprise you
+- Let's see if you can pick up what's strange about this.
+- I'm obsessed with everything about this.
+- Congratulations! You have scrolled far enough into your feed to find me
+- Did everyone already know this? I just realized that
+- I see what's happening here.
+- Let me tell you something
+- Can you believe that
+- I just learned a thing.
+- This one is coming hot off the press
+- One thing I will never really get over is
+- I dont know if we talk enough about how this might have been the most insane thing ever
+- I think one of the most insane things that I've ever learned is that
+- I'm gonna need you to stop what you're doing
+- You probably haven't heard about
+- So you want to (Insert desired goal)?, the first thing you need to understand is that
+- If you're ready to (insert desired result) then I'm gonna share a real strategy that might just (Insert positive impact) within [Insert Time Frame]
+- If you (insert action), then (insert desired result).
+- If you (insert action), you have just (Insert desired result)
+- Have you ever wondered why (insert noun) looked so good?
+- You can almost magically (insert desired result) in just a few (insert timeframe) by (Insert action) and it's not as hard as it sounds.
+- What is (insert noun), explained in [Insert Time Frame]?
+- Every (insert noun/topic) that you actually need to know.
+- There's exatly (Insert # of things) of mastering
+- Why is it impossible to
+- This is how to explain (insert noun/topic) to a (insert target audience) in [Insert Time Frame]
+- For [Insert Time Frame] in a row, (Insert action). Why?
+- What's the ideal time you should be
+- Do you ever wonder why (insert action) (Insert result)? Im here to explain why.
+- Here's why (insert negative action) and how to stop it.
+- Turns out that (insert item/action) is the best way to get (insert desired goal).
+- I'm wiling to bet, you've never heard of this.
+- (Insert result) by (Insert action) but (Insert better action) and (Insert better result)
+- This (insert action) will (Insert desired result).
+- Here's something that'll make you (insert reaction). And no no no. Don't scroll. this is good for your (Insert target).
+
+# Myth Hooks
+- It's not everyday you've got to see/say this but
+- Let me show you how to
+- This is actually a really big news!
+- Have you ever wondered why
+- Did you know that (Insert wrong information/misconception) is totally a lie.
+- Is true that (insert action) will help you (Insert desired result)?
+- Is it just me or were you also taught that
+- I was dying laughing at this the other day but apparently
+- This is the most bizarre story you'll hear today
+- Im sorry to have to do this to yall but yes, we are talking about
+- Hear me out.
+- Hear me out here for a second
+- Just a reminder that..
+- And this is one of the reason why this is called
+- Do you remember this?
+- This video can (insert desired result)
+- Let's unlearn something together.
+- Who's gonna tell me that (Insert correct Info) and not at all (Insert incorrect info)
+- At what point do we start taking this seriuosly?
+- Everyone thinks (Insert incorrect info/action) but that's why (Insert negative result)
+- Looks like (Insert action/item) is useless, now that (Insert new item/action) is here.
+- And that my friends, is how you (Insert desired result)
+- I'm concerned that this is going to be the new norm.
+- This is crazy
+
+# Comparison Hooks
+- Have you ever wondered why (insert item/action1) (insert description) while (insert item/action 2) (insert description 2)?
+- Have you ever wondered what's the difference between (Insert Item #1) and (Insert Item #2)? I feel I should know this but it's kinda confusing.
+- What makes (insert noun) (Insert description 1) or (Insert description 2)
+- Can you tell the difference between this two?
+- What exactly is the difference between (Insert action/Item1) (Insert action/Item2) (Insert action/Item 3)? I'm gonna explain it to you in simple terms.
+- Here's something that'll make you think. Here I have (Insert item #1) and a (Insert Item #2)
+- There's one easy way to tell if (insert point/action/item) is (Insert description 1) or (Insert description 2).
+- Let's play a game. Which is more (Insert adjective). Is it (Insert Item/action 1) or (insert item/action 2)
+- Should you (Insert action)? This is (Insert initial result) and this is (Insert final result)
+- (Insert item/action 1) have/can (insert desired result) than (insert item/action 2)? Honestly, this doesn't surprise me at all.
+- If you do this (insert action 1) you will (Insert result). Now if you do (Insert action 2) you will (Insert better/desired result)
+- How to determine if it's better to (insert action 1) or (insert action 2) in [Insert Time Frame]
+- (Insert action 1) (Insert action 1 result) and (Insert action 2) (Insert action 2 result), so which is better for (insert desired goal)?
+- (Insert item 1) vs (insert item 2), one of them has to go forever if you want to (insert desired goal). So which one are you choosing?
+- (Insert Item/action 1) will (insert negative result), but (Insert item/action 2) will (insert desired result).
+- One biggest differences between (insert item/action 1) and (insert item/action 2) is that
+- Doing (insert action 1) means that (insert positive result 1), and doing (Insert action 2) means that (insert positive result 2).
+- (Insert action/item) vs (insert action/item)
+- Stop using (insert outdated method/action), use (insert alternative/better method/action).
+- (Insert item/action 1) has (Insert condition 1) and (Insert item action 2) has (Insert condition 2). But is there really a difference?
+- (Insert item/action 1) are (Insert impact/result 1). (Insert item/action 2) are (Insert impact/result 2)
+- (Insert sample/item/action 1), and (Insert sample/item/action 2). Who do you think will (insert desired result)?
+- If your goal is to (insert desired goal), swap (insert item A) to (insert item B).
+- If you have (insert action/item), you're gonna (Insert result). If you have (insert better action/item), you're gonna have (Insert better/desired result)
+
+# List Hooks
+- (Insert # of things) that everyone should know
+- This is the most important video you'll see all week, and I'm not selling anything. Here's (insert # of things) that are (insert desired result)
+- Did you know there's (Insert # of things) of (Insert action/item)? Today Ima tell you what they are and why they are different.
+- Don't ask me how I know this but here are (Insert # of things)
+- This (Insert # of things) will blow your mind
+- Can you guess what's the (Insert # of things) in [Insert today's year]?
+- Here's some ideas you can take.
+- (Insert # of things) I know at [younger age] that I wish I knew at [older age]
+- (Insert # of things) that you actually think are normal but actually aren't
+- (Insert # of things) I've learned as a (insert profession/kind of person)
+- (Insert # of things) that taught me to (Insert desired result).
+- This might sound dumb but what are the worst (insert noun) to (insert action) in [Insert today's year]
+- (Insert # of actions) to (insert action) in your [insert younger age range] to make sure you (insert desired goal) in your [Insert older age range]
+- Do you want to be (Insert desired goal)? Here are (Insert # of things) to help you achieve it
+- It took me [Insert Time Frame] to learn this but I'll teach it to you in less than [Insert Time Frame]
+- (Insert # of things) to start right now. Some of this might surprise you
+- Did you know that this (Insert noun/item/action) was (Insert trivia)? Today we're looking at (Insert # of things)
+- (Insert # of things) you could use in (Insert location) to (Insert desired result)
+- (Insert # of things) I do (insert situation/time frame) as a (insert profession/kind of person),
+- (Insert # of things) that will (insert desired results) ranked from best to worst.
+- Here are (Insert # of things) not to do until you're (insert desired results)
+- (Insert # of things) you can make when
+- (Insert # of things) that will (Insert desired result). The last one is the best!
+- If you're really a (insert profession/kind of person), tell me the (Insert # of things) to (insert desired goal)
+- (Insert # of things) as a (insert profession/kind of person), that I would NEVER do.
+- If you're in your [Insert age range 1] or [insert age range 2] then these are the (Insert # of things) you need to do to make sure you (insert desired result) by [Insert older age range]
+- These are the only (Insert # of things) to have your [Insert Time Frame] kid (insert action) so they (Insert desired result) by the time they are [Insert age range]
+- These are the (Insert # of things) that I'm going to use to (insert desired goal) by the time I'm [Insert age range]
+- If you're [Insert age] then these are (Insert # things) you need to know so you (insert desired result)
+- These are (Insert # of things/action) who/that
+- I didn't wanna be the one to tell you this, but here are (Insert # of things) that nobody knows about.
+- These are the (Insert # of things) to (Insert action) right now.
+- I'm gonna break down the exact (Insert noun) that I (Insert action) as a (insert profession/kind of person) to (insert desired result)
+- If you could only do (Insert # of things) to (Insert desired result), These are (insert # of things) I would prioritize.
+- Here are (Insert # of things) why I (insert action) at [Insert age]
+- Top (Insert # of things) with the (insert positive/negative result)
+- Things I wont (insert action) as a (insert profession/kind of person)
+- Here are (Insert # of things) that you need to know if you're gonna be (Insert desired result)
+- This is the best and worst (insert item/action) at (Insert location/situation)
+- (Insert # of things) at (Insert location/situation)
+- Here are some of my favorite (insert noun/item) to do.
+- I got (Insert # of things) that will not only (Insert good result) but actually (Insert additional result)
+- These are (Insert #of things) no one talks about but it will (Insert desired result)
+- You are not (Insert problem/negative situation) you just need to (Insert action). I want you to try (Insert # of things)
+- What are the (Insert # of things) you stop doing as a (insert profession/kind of person)
+- (Insert # of things) that will (Insert possible result)
+- I'm a (insert profession/kind of person) and (insert person) told me all the (Insert # of things) in (Insert location)
+- What I wish I knew about (Insert item/action) before I had them.
+- What if I told you, you only need (Insert # of things) for the rest of your life?
+- (Insert # of things) that help me (Insert desired goal)
+- If I were to start over with (Insert method/noun) then these are the (Insert #of things) I would (Insert action) as a complete beginner in my [Insert age range]
+
+# Authority Hooks
+- This is why
+- I've said this before / I've said this [Insert Time Frame]
+- I've said it before and I'll say it again
+- You know it's a big lie and I can prove it using an easy example
+- This is the golden rule of (Insert niche/industry). Use it and (Insert desired goal/target)
+- You gonna want to hear this.
+- If you're trying to (insert desired goal/target), watch this video.
+- (Insert point/item/action) that will (insert result)
+- If I could go back to the beginning, here's exactly what I would do to (insert desired goal)
+- Stop what you're doing. If you're gonna (Insert action 1), I need you to (Insert action 2) first.
+- This is an unpopular opinion but
+- This is so random but
+- It happened again. Another (insert item/action) that could make (insert desired target/goal)
+- (insert point/action/fact) Let me explain
+- No one's ready for this conversation but (insert problem) not because of (Insert action 1) but because (Insert action 2)
+- This is your sign to (insert action) to (Insert desired result)
+- I finally figured it out!
+- If this pop's up in your feed, then it's meant to find you.
+- I dare you to (Insert action) but here's the catch your are (insert forbidden action)
+- If there's one thing I learned from my [Insert age range], there's nothing better than
+- Do yourself a favor and sit with this for a second
+- Does anyone else find it frustrating that
+- Let me get this straight
+- Just checking in. Did everyone see (Insert action/item/hack)? If not, I'm here to share it because it works!
+- You're gonna want to listen up!
+- This is what (insert item/action) actually looks like and it's not what we always think
+- Here's a tip and this one actually breaks my heart.
+- Trust me when I say this
+- Took me [Insert Time Frame] to realize.
+- You need to watch this.
+- Could you tell me something that seems illegal but isn't?
+- People who (insert desired goal) won't tell you this but I had to fight my way here so I'm gonna spill all the tea.
+- I still cannot believe that school didn't teach us this so listen. This is gonna blow your mind.
+- Most people don't get this but hopefully you will
+- Stop wasting your time in (Insert item/action) that worked a [Insert year] ago. Here's the game changer.
+- If you got a pen and [Insert Time Frame], you can steal this (Insert item/action/method) and it's an ultimate cheat code to (Insert desired goal)
+- You know what you should do right now? You should (Insert action) because (Insert impact/result)
+- The most underrated superpower of any (profession/kind of person) is
+- How do I become (insert desired goal)? Here's a simple (insert item/action) you can do that they keep secret.
+- Listen! We're (insert desired goal) in [Insert target year] and this is exactly what we're going to do.
+- There's absolutely no reason for you not to (insert desired goal). You just need to do this one thing.
+- I'm a (profession/kind of person), and this is the best (Insert item/method).
+- You gotta stop (insert action) it will (Insert result)
+- (Insert item/action/method) do (Insert negative impact) which is why (Insert problem). But we will fix that.
+- If you want (insert desired result), do (Insert action) or (Insert action 2)
+- This is how you're gonna (insert desired results) before [Insert Time Frame] so stay with me.
+- Here's the only (insert action/method) to (Insert desired result)
+- How to (insert action) a (insert target person).
+- Don't know if you're (Insert item/action 1) or (Insert item/action2)? I got you!
+- If you want to be a better (insert profession/kind of person), stop (insert action) like this.
+- This is the most underrated (insert noun) hack and it's actually something you can do every single day.
+- The only reason you (insert desired result) when you (insert action) is because
+- You're probably a (insert person's condition) that wants (Insert desired result). Listen I'm (Insert profession) and that is
+- If you (insert person's condition) then you have to (Insert action)
+- Dont' start (insert action) until you've done this one thing.
+- Never (insert action) to (Insert desired goal)
+- What if I told you that all you needed was [Insert timeframe] to (Insert desired goal)
+- Let me tell you something that will (insert desired result/change) if you let it sink in
+- Here's the fastest way to become (Insert profession/ kind of person)
+- Listen, if you do this (Insert action), I guarantee you'll be (Insert desired result)
+- What if I told you that the solution to (Insert problem) was a simple (Insert action/item)
+- If you wanna (Insert desired result). Then listen up.
+- If you have (Insert noun) you need to watch this.
+
+# Common Mistake Hooks
+- I made in my early [Insert age range] that you should definitely avoid.
+- (Insert # of things) I would never (Insert action) in my [Insert age range] that help me (Insired desired result)
+- What if I told you that when (Insert result), it's not (insert reason/action 1), it is (insert reason/action 1)
+- If you're serious about (insert desired goal), you've got to get out of this mentality.
+- If you're serious about (insert desired goal), you've got to stop
+- This is what's stopping you from (insert desired goal).
+- If you're really a (insert profession/kind of person), why don't you (insert action)?
+- You'll never (insert desired goal) if you keep on
+- If you're (insert action) and haven't been paying attention lately, you could be (Insert negative result)
+- If you don't do this when (insert action), you might end up (insert negative result).
+- (Insert wrong practice/ misconception), but that's not how it actually works.
+- stop trying to (Insert desired result) before you do this.
+- (Insert misconception) You've probably heard some butt sniffer on the internet tell you that before, but is it actually true?
+- I avoid all (Insert item/action).
+- It took me [Insert time frame] to learn this (Insert item/method). Let me tell you in [Insert Time Frame]
+- Turns out doing the opposite of (Insert action/item) might be the best thing you can do.
+- If your (Insert item/action) looks like (Insert condition), then I'm going to show you exactly what to do to (Insert desired r
+- The biggest mistake most (insert profession/kind of person) make is (insert action). So if you're listening right now and you (insert condition), just do this.
+- If your (Insert action/item) look like (Insert condition). Then you have to keep on watching.
+- Stop (insert action) to (Insert desired goal). It's not doing shit.
+- There's no doubt that (Insert action) will (Insert desired result). But, there's still people making common mistakes and we're going to fix it today.
+- I'm a (insert profession/kind of person) and I never (insert action). Here's why.
+- I'm a (insert profession/kind of person and here's one thing I never
+- I never
+- Here's the easiest (Insert action/method) to get (Insert desired result) in under [Insert Time Frame].
+- I feel like a lot of people think that (Insert Item1) (Insert item 2) are the only (Insert desired result). But that is so wrong.
+- If the only thing you know about (insert desired result) is that you have to (insert action), here's why you're wrong.
+
+# Selling Hooks
+- Here's a weird question. What if your (Insert item) can (insert desired function)?
+- If there's one thing I know is that (Insert item) is a (Insert description) because (insert unique features)
+- (Insert item 1) vs (insert item 2) which is (insert desired capability/function)
+- How (insert desired capability/function) are the new (Insert item)? Let's find out.
+- Forget the (insert traditional action/method), this one (insert new/alternative action/method) will have you (insert desired result)
+- This is the only (insert item/noun) you need.
+- There's a problem. Somehow (insert the problem). but, with (Insert item/action), (insert desired result)
+- The single most underrated (Insert noun) is
+- (Insert the problem) and you want (Insert desired result). The best way is
+- if you updated (Insert sample Item/action 1) then it's time to update your (Insert item/action 2)
+- If you don't know what to get from (Insert location), don't worry I got you. I went to (Insert location) and I'll tell you all about it.
+- The best way to avoid (Insert problem) is to
+- Let's see if (Insert item) can (Insert desired capability/function)
+- When I was [Insert younger age], I used to (Insert old action) and now at [Insert older age],
+
+# Story-Telling Hooks
+- This is gonna make me sound like an insane person.
+- Did you ever think (Insert desired situation) because I have some tea to tell you
+- Let's talk about
+- Do you think it's creepy or am I making too much of it?
+- I'm about to show you one of the most (insert adjective/description) (insert item/action) you've ever seen.
+- Nobody freak out but I just want to let you know that
+- I don't know if we have acknowledge how insane
+- I don't know if anybody out there can help me with this but
+- We need to talk about this
+- People don't talk about it enough
+- I feel like not enough people are mentioning this
+- I feel like something that nobody talks about enough is
+- What would you do if you (insert action) and (insert result)?
+- This is why I haven't posted anything in [Insert time frame].
+- If someone pops in your head when I say the things I about to say, I think that that's a sign that you should send this to them
+- Hear me out
+- Funny story
+- I've been wanting to tell this story for a while. And since we're talking about (insert item/action/topic) I think it's the perfect time
+- Let me explain
+- This is your sign to not to (insert action) but instead
+- Do you wanna hear a crazy story?
+- I debated sharing this not because (insert point/reason) but because
+- This is embarassing but it works.
+- Anybody else noticing
+- This is absolutely wild. This year alone I (insert desired result)
+- This is wild to me how many people dont understand that if (insert action) then (Insert result).
+- Yes. That's me.
+- Not many people know this but
+- Wake up, new (insert point/item/action) info just dropped
+- Did you know that (Insert information/fact)? Let's talk about it.
+- Did you all know that
+- We're all being lied to.
+- I'm not sure if this is illegal but it's extremely suspicious.
+- This is your sign to ditch (Insert old action/item) and try
+- (Insert target audience) need to hear this. (Insert action) can get you (Insert result)
+- I am (insert action) to figure out which is the (insert desired result)
+- Skip (insert old action/item) and try this (insert new action/item) instead
+- Day in the life of a [insert age] who (insert profession/ kind of person)
+- I just found out that I've been (Insert action) all wrong!
+- This is (insert item/action before) and this is (Insert item/action after)
+- (Insert desired result) without (Insert item/action). Here's how.
+- I always dream (Insert desired result) but I didn't make that dream. Here's I would do different if I could get a chance to redo it again.
+- Here is the number 1 reason I plan on (insert action) at [insert age]. And I dare you to challenge this reason.
+- My biggest regret is
+- I am using (Insert item/action/method) to (Insert desired result)
+- What I would tell my (insert old version) self is
+- This is day[X] of (Insert action/item) that makes you (Insert desired result)
+- I'm gonna show you what it's like to actually (Insert desired result). Let's go.
+- I'll talk about (Insert action/item) because it's not what I expected it to be.
+- This is what (Insert action/item) is really like.
+- Guys, it's finally the big day.
+- Here's couple reasons why I will never (Insert action) again
+- Here's my (Insert action/item routine) as a (Insert profession/ kind of person)
+- I started every [Insert day] doing the exact same way for the last [Insert Time Frame] and I'm not talking about a workout.
+- I spent a day (insert action). Heres' how far I got.
+- I (insert action). Here's a full day of
+- I only (insert action) and it has changed my life.
+- Here's what I (insert action) as someone who's (Insert kind of person)
+- This is everything I (insert action) today.
+- Here's what I (insert action) in a day.
+- Here's what you should be (Insert action) to (insert desired result)
+- I've been (insert action) every single day for the last (insert timeframe) and there's a reason for that.
+- Sorry to break your tea but while you are (insert action) I'm
+- Here's exactly why I'm gonna (Insert action) at [Insert Time Frame]
+- Saw something in the internet that said
+
+# Tutorial/Step-by-Step Hooks
+- The secret to (insert action/item/point)?
+- (Insert thing) is over, this one is way better
+- This might be the best way to (insert point/action/item). Period.
+- If you're serious about (Insert desired result), you gotta start (insert action). Let me show you how.
+- Let me show you how (insert desired result) just by
+- I thought it's a good time to demonstrate how (insert desired result) using
+- What if I told you there's a way to (Insert desired result) without (Insert action)?
+- Did you know that (Insert item) has (Insert function/capability)?
+- Here's a (Insert item/action) trick I guarantee you didn't know.
+- Don't tell my boss about this.
+- Don't tell anyone you know about this
+- I was today's years old when I found this out
+- Has this ever happened to you? (Insert situation). But, what a lot of people don't know is that
+- How to (insert starting point) to (desired result)
+- This is how you make (insert desired result)
+- (Insert action/item), will (insert result). I promise you that.
+- You need to make/do this because it's really good and pretty life changing. And it's pretty easy to make.
+- Here's a super easy [Insert Time Frame] (insert item/method)
+- Let's be honest. The only reason why (insert problem) is because (insert action). So let me show you how to do this right.
+- Can someone explain to me when did we start normalizing (insert wrong action)?
+- You're gonna hate me because this shit gonna (insert pain/struggle) but you're gonna love me once you see (insert the result)
+- Here's how I would (insert action) if I were to start over again
+- If you're in your [Insert age range 1] or [Insert age range 2], you only need (Insert item/action) to achieve (Insert desired result)
+- If you're in your [Insert age range] then this is the (Insert # of things) you need to do to (Insert desired result) by the time you're [Insert older age]
+- If you're in your [Insert age range 1] or [Insert age range 2], here's the (Insert # of things) you need to do after (insert situation)
+- Let me show you stupid easy way to (Insert desired result)
+- This is probably illegal and I wouldn't do this but here's how you can (Insert desired result)
+- (Insert point/Action) is a lot easier that you think
+- I don't know if this is even legal
+- Are you in your [insert age range 1] and [insert age range 2] and feel like (insert problem)?
+- Everyone says that they (Insert insert desired result) but no one actually teaches you how, but I will
+- Instead of (Insert action) you going to want to try this first.
+- Here's a (Insert noun/method) for the (Insert undesirable kind of person)
+- If you and your friends wanna (Insert desired target) but you dont know how and where to get started, Let me show you.
+- Here's how I secretly get (Insert desired goal)
+- This is how you (Insert desired result) in [Insert today's year]
+- How to (insert desired result) if you're in your [Insert age range]
+- I'm gonna turn this from (Starting point) to (desired result)
+- (Insert # of things) I did when I turned [Insert age] that put me ahead.
+- Here's exactly how I would (Insert action) in [Insert today's year]
+- (Insert desired goa). Here's exactly what I would do.
+- This is exactly how you and your friends will (Insert desired result) straight from just your bedroom.
+- This is exactly how you and your friends are gonna (Insert desired result) with just (Insert item/action)
+- If I only have [Insert Time Frame] to (Insert desired result), Here's exactly what I would do
+- If I were on my [Insert age range 1] or [Insert age range 2], here's exactly how I would (Insert desired result)
+- If you're [Insert Time Frame] and wanna be (Insert desired result) then you need to do the following (Insert # of things) right now.
+- Lazy? This has to be the easiest way to (Insert desired goal/target)
+- (Starting point) to (desired goal)? (Insert # of things) in [Insert Time Frame]
+- How do I make (Insert desired goal/target) starting from scratch? Here's exactly how I do it in [Insert Time Frame]
+- This is how I would (Insert action) if I'm starting from scratch.
+- This guy (Insert desired goal) Here's how you can too
+- (Insert desired target) explained in under [Insert Time Frame]
+- (Insert desired target) without even leaving your couch. Here's how.
+- Let me show you (Insert action/method) that you can do from home that makes you (Insert desired target)
+- Is it possible to (Insert desired goal) even if you have (Insert problem)?
+- (Insert action) I wish I knew sooner
+- You'll never (Insert desired goal) unless you do this.
+- Let me show you exactly what I'd do if I only have (starting point) and want to get (Insert desired result)
+- Here's how you can easily make (Insert desired result)
+- Fun fact / Here's a fun fact for you.
+- I don't want my future (insert noun) to (insert action). so this is
+- Don't hate me, but I usually (insert lame action). But don't worry, I'm gonna show you
+- This is how I took my (Insert noun/item/action) from (Insert starting point) to (Insert desired result) in just [insert time frame] using (Insert method)
+- If your goals include (insert desired goal), then you have to try (Insert action/item)
+- What is the best (insert item/action) hack?
+- Using only (insert item) you can (insert desired goal).
+- This is how I would (insert action) if I were to start all over again.
+- If you had to go from (Insert starting point) to (Insert desired goal), how would you do it?
+- This is how I'm going to (insert desired goal) by (insert action).
+- If you wanna (insert desired goal), this is exactly how you're gonna do it.
+- (Insert action) from beginner to pro.
+- Here's exactly how you're gonna (insert desired goal) using only (insert # of things)
+- As a (insert profession/kind of person) I am constantly (insert action) to (insert desired result) and this is a look at my (insert # of things) to do exactly that.
+- Here is exactly how I would (Insert action) without (Insert negative scenario)
+- Here is exactly how I would (insert action) in [Insert today's year] as a (insert profession/kind of person)
+- If you're trying to (insert desired goal 1) and (insert desired goal 2) at the same time, then here's exactly what (Insert action) should look like.
+- Today I'm gonna show you
+- Today I'm gonna teach you
+- This is the perfect (Insert item/action/method) to help you (insert desired goal)
+- (Insert action/item) every beginner should know to (Insert desired goal)
+- (Insert action/item) is stoppping you from (Insert desired result). But I got you!
+- This is going to be super detailed so try to follow along.
+- Okay this is how I do what I like to call (Insert item/action/method).
+- This is (insert desired goal) 101.
+- Listen, I know you hate this (insert action/item), but this is what helped me (insert desired result) and it's gonna help you if you do it properly.
+- If you have no idea how to (insert action/item), listen to this video.
+- If I told you that this (Insert action) is (insert trivia), would you believe me?
+- Did you know if you (Insert action), you'll get (insert desired results). I couldn't believe it either until I try it.
+- This is why you should
+- This is how a (insert expert/profession) levels up their
+- If you wanna (Insert desired goal) but you still want to (insert wrong action) then this is for you.
+- How long does it take you to go from (insert starting point) to (insert end goal)?
+
+# Other/General Hooks
+- I think it's kinda crazy
+- Check this out
+- Check out this
+- I don't know if you heard
+- Let me show you something insane
+- Breaking news!
+- You are not gonna believe this.
+- Are you saying that
+- Does anybody else wonder
+- Took me [Insert Time Frame] to realize that
+- I don't know who needs to hear this today but
+- Can you do me a favor and explain to me why
+- Is it just me, or
+- I don't know if anyone else feels this way, but
+- I'm convinced that
+- Whoever you send this video to (Insert desired result)
+- I knew it when I was younger but I didnt know it until I hit my [Insert age range]. Are you ready?
+- Can we talk about how (Insert point/action/item) literally just makes sense?
+- Isn't it funny
+- Anyone else who's also (insert pain/problem) right now, just a reminder that
+- Gentle reminder that
+- This will blow your mind
+- Question I got a lot is
+- Here's some interesting facts that you might not know
+- You know what nobody talks about?
+- If you want (insert desired result) and don't know where to start? Here's easy example.
+- If you're somebody who does not heard about this yet
+- Did you know that
+- I can't believe I'm making this video right now but
+- We're cooked.
+- I often get in conversations about
+- Let me get this straight
+- Anyone else think it's wild that
+- A (insert profession/kind of person) won't judge you for
+- If you're a (insert profession/ kind of person) and you want to (insert desired result) but (insert problem) then this is for you!
+- There is a ton of bad advice on social media on how to (insert desired goal)
+- So most people fail this (Insert action). Can you pass it?
+- Be honest how many times can you do (insert action) before (insert negative impact)?
+- When you (Insert action) you're gonna (insert result), When you (Insert action 2) you're gonna (insert result 2)
+- When you (insert action) something magical will happen.
+- After learning this, I will never (insert action) again.
+- Stop (insert action) until you learn this secret.
+- I think it's funny how
+- The age of (insert item/action) is officially gone.
+- This is your daily reminder that
+- This is your reminder that
+- Just in case you didn't know or maybe you need a reminder
+`;
