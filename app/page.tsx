@@ -5,7 +5,7 @@ import Onboarding from "@/components/Onboarding";
 import EditProfileModal from "@/components/EditProfileModal";
 import type { CreatorProfile, StyleProfile } from "@/lib/types";
 import { THOMAS_INTRO_GUIDE, THOMAS_SCRIPT_GUIDE } from "@/lib/thomas-guides";
-import { PERSONAS, DEFAULT_PERSONA_ID, getPersona } from "@/lib/personas";
+import { WRITING_STYLES, DEFAULT_STYLE_ID, getWritingStyle } from "@/lib/personas";
 
 type ScriptLength = "short" | "medium" | "long";
 type Platform = "youtube" | "reels";
@@ -38,7 +38,7 @@ const LS_KEY          = "yt_api_key";
 const LS_ANT_KEY      = "yt_anthropic_key";
 const LS_INTRO_GUIDE  = "yt_intro_guide";
 const LS_SCRIPT_GUIDE = "yt_script_guide";
-const LS_PERSONA      = "yt_persona_id";
+const LS_WRITING_STYLE = "yt_persona_id"; // localStorage key kept for backwards compat
 
 function countWords(text: string): number {
   return text.replace(/#{1,6}\s+/g, "").trim().split(/\s+/).filter(Boolean).length;
@@ -145,7 +145,7 @@ export default function Home() {
   const [anthropicApiKey, setAnthropicApiKey] = useState("");
   const [introGuide, setIntroGuide] = useState("");
   const [scriptGuide, setScriptGuide] = useState("");
-  const [personaId, setPersonaId] = useState(DEFAULT_PERSONA_ID);
+  const [personaId, setPersonaId] = useState(DEFAULT_STYLE_ID);
   const [showEditProfile, setShowEditProfile] = useState(false);
 
   // ── Variable inputs (per video) ───────────────────────────────────────────
@@ -184,10 +184,10 @@ export default function Home() {
     if (rawKey)     setApiKey(rawKey);
     if (rawAntKey)  setAnthropicApiKey(rawAntKey);
     // Seed with Thomas's guides as defaults if user hasn't uploaded custom ones
-    const rawPersona = localStorage.getItem(LS_PERSONA);
-    const pid = rawPersona ?? DEFAULT_PERSONA_ID;
+    const rawPersona = localStorage.getItem(LS_WRITING_STYLE);
+    const pid = rawPersona ?? DEFAULT_STYLE_ID;
     setPersonaId(pid);
-    const persona = getPersona(pid);
+    const persona = getWritingStyle(pid);
     if (rawIntro)   setIntroGuide(rawIntro);
     else            setIntroGuide(persona.introGuide);
     if (rawScript)  setScriptGuide(rawScript);
@@ -227,14 +227,14 @@ export default function Home() {
   );
 
   const handlePersonaChange = useCallback((pid: string) => {
-    const persona = getPersona(pid);
+    const style = getWritingStyle(pid);
     setPersonaId(pid);
-    localStorage.setItem(LS_PERSONA, pid);
+    localStorage.setItem(LS_WRITING_STYLE, pid);
     // Only switch guides if user hasn't uploaded custom ones
     const hasCustomIntro  = !!localStorage.getItem(LS_INTRO_GUIDE);
     const hasCustomScript = !!localStorage.getItem(LS_SCRIPT_GUIDE);
-    if (!hasCustomIntro)  setIntroGuide(persona.introGuide);
-    if (!hasCustomScript) setScriptGuide(persona.scriptGuide);
+    if (!hasCustomIntro)  setIntroGuide(style.introGuide);
+    if (!hasCustomScript) setScriptGuide(style.scriptGuide);
   }, []);
 
   const handleOnboardingComplete = useCallback(
@@ -674,26 +674,26 @@ ${bodyHtml}
         {/* RIGHT: Inputs */}
         <div className="order-1 xl:order-2 flex flex-col gap-5">
 
-          {/* ── PERSONA SELECTOR ─────────────────────────────────────────── */}
+          {/* ── WRITING STYLE SELECTOR ───────────────────────────────────── */}
           <div className="rounded-2xl border p-5 flex flex-col gap-3" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
             <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>Writing Style</p>
             <div className="grid grid-cols-2 gap-2.5">
-              {PERSONAS.map((persona) => {
-                const active = personaId === persona.id;
+              {WRITING_STYLES.map((style) => {
+                const active = personaId === style.id;
                 return (
                   <button
-                    key={persona.id}
-                    onClick={() => persona.available && handlePersonaChange(persona.id)}
-                    disabled={!persona.available}
+                    key={style.id}
+                    onClick={() => style.available && handlePersonaChange(style.id)}
+                    disabled={!style.available}
                     className="relative flex flex-col gap-2 rounded-xl p-3.5 text-left transition-all"
                     style={{
                       background: active ? "var(--accent-glow)" : "var(--surface-2)",
                       border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-                      opacity: persona.available ? 1 : 0.45,
-                      cursor: persona.available ? "pointer" : "not-allowed",
+                      opacity: style.available ? 1 : 0.45,
+                      cursor: style.available ? "pointer" : "not-allowed",
                     }}
                   >
-                    {!persona.available && (
+                    {!style.available && (
                       <span className="absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", fontSize: "9px" }}>
                         Soon
                       </span>
@@ -701,21 +701,23 @@ ${bodyHtml}
                     <div className="flex items-center gap-2.5">
                       <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                        style={{ background: active ? persona.color : `${persona.color}22`, color: active ? "#fff" : persona.color }}
+                        style={{ background: active ? style.color : `${style.color}22`, color: active ? "#fff" : style.color }}
                       >
-                        {persona.avatar}
+                        {style.avatar}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold leading-none truncate" style={{ color: active ? "var(--foreground)" : "var(--foreground)" }}>
-                          {persona.name}
+                        <p className="text-xs font-semibold leading-none truncate" style={{ color: "var(--foreground)" }}>
+                          {style.name}
                         </p>
-                        {active && (
+                        {active ? (
                           <p className="text-xs mt-0.5 leading-3" style={{ color: "var(--accent)", fontSize: "10px" }}>Active</p>
+                        ) : (
+                          <p className="text-xs mt-0.5 leading-3" style={{ color: "var(--muted)", fontSize: "10px" }}>{style.contentType}</p>
                         )}
                       </div>
                     </div>
                     <p className="text-xs leading-4" style={{ color: "var(--muted)", fontSize: "11px" }}>
-                      {persona.tagline}
+                      {style.tagline}
                     </p>
                   </button>
                 );

@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback } from "react";
 import { DEFAULT_SAMPLE_SCRIPTS, type SampleScript } from "@/lib/scripts";
 import type { CreatorProfile, StyleProfile, ContentStyle } from "@/lib/types";
-import { PERSONAS, type Persona } from "@/lib/personas";
+import { WRITING_STYLES, type WritingStyle } from "@/lib/personas";
 
 interface OnboardingProps {
   onComplete: (
@@ -128,7 +128,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
   const [error, setError] = useState("");
-  const [selectedPersona, setSelectedPersona] = useState<Persona | null>(PERSONAS.find(p => p.available) ?? null);
+  const [selectedPersona, setSelectedPersona] = useState<WritingStyle | null>(WRITING_STYLES.find(s => s.available) ?? null);
 
   // Channel scrape state
   const [scrapeLoading, setScrapeLoading] = useState(false);
@@ -364,24 +364,24 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         </p>
       </div>
 
-      {/* Persona picker */}
+      {/* Writing style picker */}
       <div>
-        <p className="text-xs font-semibold uppercase tracking-widest mb-3 text-center" style={{ color: "var(--muted)" }}>Choose a Writing Framework</p>
+        <p className="text-xs font-semibold uppercase tracking-widest mb-3 text-center" style={{ color: "var(--muted)" }}>Choose a Writing Style</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {PERSONAS.map((persona) => {
-            const isSelected = selectedPersona?.id === persona.id;
+          {WRITING_STYLES.map((style) => {
+            const isSelected = selectedPersona?.id === style.id;
             return (
               <button
-                key={persona.id}
-                disabled={!persona.available}
-                onClick={() => persona.available && setSelectedPersona(persona)}
+                key={style.id}
+                disabled={!style.available}
+                onClick={() => style.available && setSelectedPersona(style)}
                 className="relative rounded-2xl p-5 text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: isSelected ? "var(--accent-glow)" : "var(--surface-2)",
                   border: `1px solid ${isSelected ? "var(--accent)" : "var(--border)"}`,
                 }}
               >
-                {!persona.available && (
+                {!style.available && (
                   <span className="absolute top-3 right-3 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}>
                     Soon
                   </span>
@@ -389,17 +389,22 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
                 {isSelected && (
                   <span className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: "var(--accent)", color: "#fff" }}>✓</span>
                 )}
-                <div
-                  className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold mb-3"
-                  style={{ background: persona.color + "22", color: persona.color }}
-                >
-                  {persona.avatar}
+                <div className="flex items-center gap-2 mb-3">
+                  <div
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0"
+                    style={{ background: style.color + "22", color: style.color }}
+                  >
+                    {style.avatar}
+                  </div>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: style.color + "18", color: style.color }}>
+                    {style.contentType}
+                  </span>
                 </div>
-                <p className="text-sm font-semibold mb-0.5" style={{ color: isSelected ? "var(--accent)" : "var(--foreground)" }}>{persona.name}</p>
-                <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>{persona.tagline}</p>
-                {isSelected && (
+                <p className="text-sm font-semibold mb-0.5" style={{ color: isSelected ? "var(--accent)" : "var(--foreground)" }}>{style.name}</p>
+                <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>{style.tagline}</p>
+                {isSelected && style.identity.name && (
                   <p className="text-xs mt-2 leading-4" style={{ color: "var(--accent)", opacity: 0.8 }}>
-                    Identity pre-filled from this framework ↓
+                    Identity pre-filled from this style ↓
                   </p>
                 )}
               </button>

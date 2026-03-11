@@ -1,14 +1,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Personas — writing framework templates
+// Writing Styles — scripting framework templates
 //
-// A persona defines HOW a script is written: style, tone, sentence structure,
-// intro architecture, body mechanics, rehooks, outro format, and CTAs.
+// A writing style defines HOW a script is written: voice, tone, sentence
+// structure, intro architecture, body mechanics, rehooks, outro format, CTAs.
+//
+// Writing styles are content-type specific — each one is optimised for a
+// particular kind of YouTube video (education, best-of comparisons, reviews).
 //
 // The creator's own profile (Who Am I: proof points, stories, identity) is
-// always layered on top — the persona is the framework, the creator is the voice.
+// always layered on top — the writing style is the framework, the creator is
+// the voice.
 //
 // Precedence (highest → lowest):
-//   User-uploaded custom guide > Persona guide > Built-in defaults
+//   User-uploaded custom guide > Writing style guide > Built-in defaults
 // ─────────────────────────────────────────────────────────────────────────────
 
 import {
@@ -18,7 +22,19 @@ import {
   THOMAS_REELS_GUIDE,
 } from "./thomas-guides";
 
-export interface PersonaIdentity {
+import {
+  BEST_OF_STYLE_GUIDE,
+  BEST_OF_INTRO_GUIDE,
+  BEST_OF_SCRIPT_GUIDE,
+} from "./best-of-guides";
+
+import {
+  PRODUCT_REVIEW_STYLE_GUIDE,
+  PRODUCT_REVIEW_INTRO_GUIDE,
+  PRODUCT_REVIEW_SCRIPT_GUIDE,
+} from "./product-review-guides";
+
+export interface WritingStyleIdentity {
   name: string;
   channelUrl: string;
   credibilityStack: string;
@@ -28,7 +44,7 @@ export interface PersonaIdentity {
   contentStyle: string;
 }
 
-export interface Persona {
+export interface WritingStyle {
   id: string;
   name: string;
   tagline: string;
@@ -36,19 +52,21 @@ export interface Persona {
   avatar: string;             // initials shown in the card
   color: string;              // CSS color for the avatar background
   available: boolean;
-  identity: PersonaIdentity;  // Input 2 — default Who Am I fields
+  contentType: string;        // e.g. "Education", "Best Of", "Product Review"
+  identity: WritingStyleIdentity;  // Input 2 — default Who Am I fields
   styleGuide: string;         // Input 1 — language, tone, word choice
   introGuide: string;         // Input 3 — intro beats, structure, USP
   scriptGuide: string;        // Input 4 — body, rehooks, story flow, outro, CTAs
   reelsGuide?: string;        // Input 5 — Reels/TikTok templates (overrides 3 & 4 for short-form)
 }
 
-// ─── Thomas Graham ───────────────────────────────────────────────────────────
+// ─── Thomas Graham — Education ───────────────────────────────────────────────
 // Calm, authoritative, sophisticated ideas in simple language.
 // One idea per sentence. Beat-driven intros. Ascending value order.
 // Proof-backed. Never hype. "Smart friend who figured it out."
+// Best for: education, authority-building, professional expertise content.
 
-const THOMAS: Persona = {
+const THOMAS: WritingStyle = {
   id: "thomas",
   name: "Thomas Graham",
   tagline: "Calm authority. Proof-backed. Zero hype.",
@@ -56,6 +74,7 @@ const THOMAS: Persona = {
   avatar: "TG",
   color: "#6366f1",
   available: true,
+  contentType: "Education",
   identity: {
     name: "Thomas Graham",
     channelUrl: "https://youtube.com/@thomasgraham",
@@ -85,6 +104,64 @@ More content does not equal more growth. More positioning clarity equals more gr
   introGuide:  THOMAS_INTRO_GUIDE,
   scriptGuide: THOMAS_SCRIPT_GUIDE,
   reelsGuide:  THOMAS_REELS_GUIDE,
+};
+
+// ─── Best Of ─────────────────────────────────────────────────────────────────
+// Product comparison framework for "Best X" YouTube videos.
+// Structured product sections with positioning, standout feature, specs,
+// demo, limitation, and verdict beats. Ascending value order. Prose only.
+// Best for: "best [product category]", top-N comparison, roundup videos.
+
+const BEST_OF: WritingStyle = {
+  id: "best-of",
+  name: "Best Of",
+  tagline: "Product comparisons. Structured sections. Verdict-driven.",
+  description: "Purpose-built for 'Best X' comparison videos. Each product gets a structured section: positioning, standout feature, specs, demo walkthrough, honest limitation, and a clear verdict. Ascending value order. Prose only — never bullets.",
+  avatar: "BO",
+  color: "#10b981",
+  available: true,
+  contentType: "Best Of",
+  identity: {
+    name: "",
+    channelUrl: "",
+    credibilityStack: "",
+    uniqueMethod: "",
+    contraryBelief: "",
+    targetPerson: "",
+    contentStyle: "talking-head",
+  },
+  styleGuide:  BEST_OF_STYLE_GUIDE,
+  introGuide:  BEST_OF_INTRO_GUIDE,
+  scriptGuide: BEST_OF_SCRIPT_GUIDE,
+};
+
+// ─── Product Review ───────────────────────────────────────────────────────────
+// Single-product review framework built around the expectations vs reality gap.
+// Central tension through-line. Ascending evaluation categories. Segmented
+// verdict by buyer type. Process-based demonstrations — never evaluate outputs.
+// Best for: single product review videos, in-depth honest assessments.
+
+const PRODUCT_REVIEW: WritingStyle = {
+  id: "product-review",
+  name: "Product Review",
+  tagline: "Expectations vs reality. Central tension. Honest verdict.",
+  description: "Built for single-product review videos. Every section is structured around what the viewer expects vs what actually happens. Ascending evaluation categories. Verdict segmented by buyer type. Shows product use — never evaluates specific on-screen outputs.",
+  avatar: "PR",
+  color: "#f97316",
+  available: true,
+  contentType: "Product Review",
+  identity: {
+    name: "",
+    channelUrl: "",
+    credibilityStack: "",
+    uniqueMethod: "",
+    contraryBelief: "",
+    targetPerson: "",
+    contentStyle: "talking-head",
+  },
+  styleGuide:  PRODUCT_REVIEW_STYLE_GUIDE,
+  introGuide:  PRODUCT_REVIEW_INTRO_GUIDE,
+  scriptGuide: PRODUCT_REVIEW_SCRIPT_GUIDE,
 };
 
 // ─── Alex Hormozi ─────────────────────────────────────────────────────────────
@@ -212,7 +289,7 @@ Examples:
 - No hype language — let specificity do the persuading
 `.trim();
 
-const HORMOZI: Persona = {
+const HORMOZI: WritingStyle = {
   id: "hormozi",
   name: "Alex Hormozi",
   tagline: "Dense value. Bold claims. The math always checks out.",
@@ -220,6 +297,7 @@ const HORMOZI: Persona = {
   avatar: "AH",
   color: "#f59e0b",
   available: false, // Coming soon — guides are scaffolded, not yet verified
+  contentType: "Education",
   identity: {
     name: "",
     channelUrl: "",
@@ -236,10 +314,22 @@ const HORMOZI: Persona = {
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
-export const PERSONAS: Persona[] = [THOMAS, HORMOZI];
+export const WRITING_STYLES: WritingStyle[] = [THOMAS, BEST_OF, PRODUCT_REVIEW, HORMOZI];
 
-export const DEFAULT_PERSONA_ID = "thomas";
+export const DEFAULT_STYLE_ID = "thomas";
 
-export function getPersona(id: string): Persona {
-  return PERSONAS.find((p) => p.id === id) ?? THOMAS;
+export function getWritingStyle(id: string): WritingStyle {
+  return WRITING_STYLES.find((s) => s.id === id) ?? THOMAS;
 }
+
+// ─── Legacy aliases (kept for backwards compatibility during migration) ────────
+/** @deprecated Use WritingStyle */
+export type Persona = WritingStyle;
+/** @deprecated Use WritingStyle */
+export type PersonaIdentity = WritingStyleIdentity;
+/** @deprecated Use WRITING_STYLES */
+export const PERSONAS = WRITING_STYLES;
+/** @deprecated Use DEFAULT_STYLE_ID */
+export const DEFAULT_PERSONA_ID = DEFAULT_STYLE_ID;
+/** @deprecated Use getWritingStyle */
+export const getPersona = getWritingStyle;

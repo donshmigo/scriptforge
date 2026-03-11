@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { DEFAULT_SAMPLE_SCRIPTS, type SampleScript } from "@/lib/scripts";
 import type { CreatorProfile, StyleProfile } from "@/lib/types";
-import { getPersona } from "@/lib/personas";
+import { getWritingStyle } from "@/lib/personas";
 
 interface EditProfileModalProps {
   profile: CreatorProfile;
@@ -242,7 +242,7 @@ export default function EditProfileModal({
   }, [apiKey, pendingScripts]);
 
   const loadIdentityFromPersona = useCallback(() => {
-    const persona = getPersona(personaId);
+    const persona = getWritingStyle(personaId);
     const id = persona.identity;
     if (id.name)              setName(id.name);
     if (id.channelUrl)        setChannelUrl(id.channelUrl);
@@ -358,16 +358,16 @@ export default function EditProfileModal({
             <div className="flex flex-col gap-5">
               {/* Load from persona */}
               {(() => {
-                const persona = getPersona(personaId);
-                if (!persona.identity.name) return null;
+                const style = getWritingStyle(personaId);
+                if (!style.identity.name) return null;
                 return (
                   <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
                     <div>
                       <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
-                        Load {persona.name}&apos;s identity
+                        Load {style.name}&apos;s identity
                       </p>
                       <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                        Pre-fill all fields from the {persona.name} persona document
+                        Pre-fill all fields from the {style.name} writing style document
                       </p>
                     </div>
                     <button

@@ -4,7 +4,7 @@ export const maxDuration = 300; // Vercel Pro: up to 300s for long AI generation
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { THOMAS_WHO_AM_I } from "@/lib/thomas-guides";
-import { getPersona } from "@/lib/personas";
+import { getWritingStyle } from "@/lib/personas";
 import { getHooksForReelType } from "@/lib/viral-hooks";
 import { withRetry } from "@/lib/openai-retry";
 
@@ -105,13 +105,13 @@ export async function POST(req: NextRequest) {
     };
     const selectedReelTemplate = reelType ? REEL_TYPE_LABELS[reelType] : null;
 
-    // Resolve persona — provides the base writing framework
-    const persona = getPersona(personaId);
+    // Resolve writing style — provides the base writing framework
+    const persona = getWritingStyle(personaId);
 
     // ── INPUT 1: STYLE ────────────────────────────────────────────────────────
-    // Precedence: forensic analysis of real scripts > persona's Style Guide
+    // Precedence: forensic analysis of real scripts > writing style's Style Guide
     const styleSection = `════════════════════════════════════════
-INPUT 1 — STYLE GUIDE  [Persona: ${persona.name}]
+INPUT 1 — STYLE GUIDE  [Writing Style: ${persona.name}]
 Language, tone, word choice, sentence structure. This governs ALL writing decisions.
 ════════════════════════════════════════
 
@@ -161,7 +161,7 @@ ${creatorProfile.targetPerson || "See target audience above."}` : ""}`;
     // For YouTube: normal Input 3 + Input 4.
     const guideSection = isReels
       ? `════════════════════════════════════════
-INPUT 5 — INSTAGRAM REELS / TIKTOK SCRIPT GUIDE  [Persona: ${persona.name}]
+INPUT 5 — INSTAGRAM REELS / TIKTOK SCRIPT GUIDE  [Writing Style: ${persona.name}]
 Replaces Input 3 (Intro) and Input 4 (Script) for short-form output.
 Input 1 (Style) and Input 2 (Identity) still apply in full.
 ════════════════════════════════════════
@@ -178,27 +178,27 @@ ${selectedReelTemplate
 ════════════════════════════════════════
 HOOK INSPIRATION LIBRARY
 Use these as structural patterns for the opening hook sentence only.
-Never copy verbatim. Adapt to Thomas's voice (Input 1) and the creator's credibility (Input 2).
+Never copy verbatim. Adapt to the writing style voice (Input 1) and the creator's credibility (Input 2).
 Anti-fabrication rules still apply — no invented numbers or claims.
 ════════════════════════════════════════
 
 ${getHooksForReelType(reelType ?? "educational")}`
       : `════════════════════════════════════════
-INPUT 3 — HOW TO WRITE AN INTRODUCTION  [Persona: ${persona.name}]
+INPUT 3 — HOW TO WRITE AN INTRODUCTION  [Writing Style: ${persona.name}]
 Intro beats, modes, USP. Nothing else.
 ════════════════════════════════════════
 
 ${introGuide?.trim() || persona.introGuide}
 
 ════════════════════════════════════════
-INPUT 4 — HOW TO WRITE A SCRIPT  [Persona: ${persona.name}]
+INPUT 4 — HOW TO WRITE A SCRIPT  [Writing Style: ${persona.name}]
 Body structure, rehooks, story flow, outro, CTAs. Intro is governed by Input 3.
 ════════════════════════════════════════
 
 ${scriptGuide?.trim() || persona.scriptGuide}`;
 
     // ── SYSTEM PROMPT ─────────────────────────────────────────────────────────
-    const systemPrompt = `You are writing a ${isReels ? "short-form Instagram Reels / TikTok" : "YouTube"} script using the "${persona.name}" writing framework. Each input governs exactly one domain.
+    const systemPrompt = `You are writing a ${isReels ? "short-form Instagram Reels / TikTok" : "YouTube"} script using the "${persona.name}" writing style. Each input governs exactly one domain.
 
 CONFLICT RESOLUTION:
 - Language, tone, word choice, sentence structure → Input 1 (Style Guide)
