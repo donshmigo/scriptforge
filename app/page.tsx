@@ -7,7 +7,7 @@ import type { CreatorProfile, StyleProfile } from "@/lib/types";
 import { THOMAS_INTRO_GUIDE, THOMAS_SCRIPT_GUIDE } from "@/lib/thomas-guides";
 import { WRITING_STYLES, DEFAULT_STYLE_ID, getWritingStyle } from "@/lib/personas";
 
-type ScriptLength = "short" | "medium" | "long";
+type ScriptLength = "1" | "2" | "3" | "4" | "5";
 type Platform = "youtube" | "reels";
 type ReelType = "educational" | "myth" | "comparison" | "list" | "step-by-step" | "selling";
 
@@ -20,17 +20,21 @@ const REEL_TYPES: { id: ReelType; label: string; sub: string }[] = [
   { id: "selling",      label: "Selling",        sub: "Pain point → solution → steps → CTA" },
 ];
 
-const YOUTUBE_LENGTHS = {
-  short:  { label: "Short",  sub: "5–7 min" },
-  medium: { label: "Medium", sub: "10–15 min" },
-  long:   { label: "Long",   sub: "20+ min" },
-} as const;
+const YOUTUBE_LENGTHS: Record<ScriptLength, { label: string; sub: string }> = {
+  "1": { label: "6–8 min",   sub: "~1,000 words" },
+  "2": { label: "8–10 min",  sub: "~1,300 words" },
+  "3": { label: "10–12 min", sub: "~1,600 words" },
+  "4": { label: "12–15 min", sub: "~2,000 words" },
+  "5": { label: "15–20 min", sub: "~2,500 words" },
+};
 
-const REELS_LENGTHS = {
-  short:  { label: "Short",  sub: "15–30 sec" },
-  medium: { label: "Medium", sub: "45–60 sec" },
-  long:   { label: "Long",   sub: "90–120 sec" },
-} as const;
+const REELS_LENGTHS: Record<ScriptLength, { label: string; sub: string }> = {
+  "1": { label: "20–30 sec",  sub: "~65 words" },
+  "2": { label: "30–40 sec",  sub: "~90 words" },
+  "3": { label: "40–50 sec",  sub: "~110 words" },
+  "4": { label: "50–60 sec",  sub: "~135 words" },
+  "5": { label: "60–90 sec",  sub: "~190 words" },
+};
 
 const LS_PROFILE      = "yt_creator_profile";
 const LS_STYLE        = "yt_style_profile";
@@ -156,7 +160,7 @@ export default function Home() {
   const [referenceInfo, setReferenceInfo] = useState("");
   const [subheadings, setSubheadings] = useState("");
   const [userIntro, setUserIntro] = useState("");
-  const [scriptLength, setScriptLength] = useState<ScriptLength>("medium");
+  const [scriptLength, setScriptLength] = useState<ScriptLength>("3");
 
   // Reference file upload
   const [refUploading, setRefUploading] = useState(false);
@@ -168,6 +172,9 @@ export default function Home() {
   const [selectedHookIdx, setSelectedHookIdx] = useState<number>(-1); // -1 = original
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [reviseLoading, setReviseLoading] = useState(false);
+  const [reviseError, setReviseError] = useState("");
   const [copied, setCopied] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
 
@@ -324,6 +331,45 @@ export default function Home() {
       setLoading(false);
     }
   }, [apiKey, anthropicApiKey, platform, reelType, videoTitle, videoIdea, userIntro, referenceInfo, subheadings, scriptLength, styleProfile, creatorProfile, introGuide, scriptGuide, personaId]);
+
+  const handleRevise = useCallback(async () => {
+    if (!feedbackMessage.trim()) return;
+    if (!script) return;
+
+    setReviseLoading(true);
+    setReviseError("");
+
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform,
+          videoTitle,
+          scriptLength,
+          styleAnalysis: styleProfile?.analysis ?? "",
+          scriptSamples: [],
+          creatorProfile,
+          personaId,
+          apiKey,
+          anthropicApiKey,
+          currentScript: script,
+          feedbackMessage: feedbackMessage.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Revision failed.");
+      setScript(data.script);
+      setFeedbackMessage("");
+      setHookAlternatives([]);
+      setSelectedHookIdx(-1);
+      setTimeout(() => outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+    } catch (e: unknown) {
+      setReviseError(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setReviseLoading(false);
+    }
+  }, [feedbackMessage, script, platform, videoTitle, scriptLength, styleProfile, creatorProfile, personaId, apiKey, anthropicApiKey]);
 
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(script);
@@ -550,6 +596,28 @@ ${bodyHtml}
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {script && (
+              <button
+                onClick={() => {
+                  setScript("");
+                  setVideoTitle("");
+                  setVideoIdea("");
+                  setUserIntro("");
+                  setReferenceInfo("");
+                  setSubheadings("");
+                  setHookAlternatives([]);
+                  setSelectedHookIdx(-1);
+                  setFeedbackMessage("");
+                  setError("");
+                  setReviseError("");
+                }}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+                title="Clear and start a new script"
+              >
+                <span>↺</span> New Script
+              </button>
+            )}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}>
               <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: styleProfile ? "var(--green)" : "var(--accent)" }} />
               {creatorProfile.name || "Creator"}
@@ -676,6 +744,35 @@ ${bodyHtml}
 
               <div className="px-8 py-6 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
                 <div className="text-sm">{renderScript(script)}</div>
+
+                {/* Feedback / Revision */}
+                <div className="mt-8 pt-6 border-t" style={{ borderColor: "var(--border)" }}>
+                  <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--muted)" }}>Request a revision</p>
+                  <textarea
+                    value={feedbackMessage}
+                    onChange={(e) => { setFeedbackMessage(e.target.value); setReviseError(""); }}
+                    onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleRevise(); }}
+                    placeholder={`e.g. "Change the CTA to mention my free guide instead" or "The intro feels too long — tighten it"`}
+                    rows={3}
+                    className="w-full rounded-xl px-4 py-3 text-sm resize-none"
+                    style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", outline: "none" }}
+                  />
+                  {reviseError && (
+                    <p className="text-xs mt-1.5" style={{ color: "var(--red)" }}>{reviseError}</p>
+                  )}
+                  <button
+                    onClick={handleRevise}
+                    disabled={reviseLoading || !feedbackMessage.trim()}
+                    className="mt-2 w-full rounded-xl py-2.5 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{ background: "var(--surface-2)", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                  >
+                    {reviseLoading
+                      ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-accent/30 border-t-current animate-spin inline-block" />Revising…</>
+                      : <><span>↺</span> Revise Script</>
+                    }
+                  </button>
+                  <p className="text-center text-xs mt-1.5" style={{ color: "var(--muted)" }}>⌘↵ to revise</p>
+                </div>
               </div>
             </div>
           )}
@@ -962,19 +1059,19 @@ ${bodyHtml}
               <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>
                 {platform === "reels" ? "Reel Length" : "Script Length"}
               </label>
-              <div className="grid grid-cols-3 gap-2">
-                {(["short", "medium", "long"] as ScriptLength[]).map((len) => {
+              <div className="grid grid-cols-5 gap-1.5">
+                {(["1", "2", "3", "4", "5"] as ScriptLength[]).map((len) => {
                   const info = platform === "reels" ? REELS_LENGTHS : YOUTUBE_LENGTHS;
                   const active = scriptLength === len;
                   return (
                     <button
                       key={len}
                       onClick={() => setScriptLength(len)}
-                      className="rounded-lg px-3 py-2.5 text-xs font-medium transition-all flex flex-col items-center gap-0.5"
+                      className="rounded-lg px-1.5 py-2.5 text-xs font-medium transition-all flex flex-col items-center gap-0.5"
                       style={{ background: active ? "var(--accent-glow)" : "var(--surface-2)", color: active ? "var(--accent)" : "var(--muted)", border: `1px solid ${active ? "var(--accent)" : "var(--border)"}` }}
                     >
-                      <span className="font-semibold">{info[len].label}</span>
-                      <span style={{ fontSize: "10px", opacity: 0.8 }}>{info[len].sub}</span>
+                      <span className="font-semibold" style={{ fontSize: "10px" }}>{info[len].label}</span>
+                      <span style={{ fontSize: "9px", opacity: 0.7 }}>{info[len].sub}</span>
                     </button>
                   );
                 })}

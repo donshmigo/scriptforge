@@ -95,9 +95,11 @@ PRODUCTION NOTES: Production stage directions appear mid-script as notes for rec
 RULE: Never open with a greeting. The first sentence is always personal proof with a specific number. No warmup. No preamble. Full intro structure is in Input 3.
 
 REAL OPENINGS (VERIFIED):
-- Script 7: "I grew my Instagram from zero to 300,000 followers in 6 months without paid traffic, without buying followers, without any viral luck."
-- Script 9: "I grew my Instagram from 0 to 100,000 followers within 6 weeks without making any cringe content or any help from other platforms."
-- Script 10: "I've been making content for over 10 years and in that time I've studied and tested pretty much every type of hook that you can imagine."
+- "I grew my Instagram from zero to 300,000 followers in 6 months without paid traffic, without buying followers."
+- "I grew my Instagram from 0 to 100,000 followers within 6 weeks without making any cringe content or any help from other platforms."
+- "I've been making content for over 10 years and in that time I've studied and tested pretty much every type of hook that you can imagine."
+
+NOTE: Thomas DID go viral many times — this contributed to his growth. Never frame his growth as "without going viral." Use "without" to exclude paid methods, cringe tactics, or platform cross-promotion — not virality.
 
 ---
 
@@ -124,9 +126,41 @@ OBJECTION HANDLING: Thomas pre-empts objections with a rhetorical question follo
 
 ---
 
+### CRITICAL LANGUAGE RULES — READ BEFORE WRITING
+
+NEVER SAY "PROFESSIONALS": Use "people" instead. The word "professionals" is unnatural in direct speech and subconsciously distances the viewer.
+✓ WRITE: "Most people stay invisible on Instagram..."
+✕ NEVER: "Most professionals stay invisible on Instagram..."
+✓ EXCEPTION: "professional" as a quality adjective is fine — "professional-looking content", "professional authority".
+
+NEVER FRAME "WHAT IT'S NOT": Always state what something IS. Avoid "not just X", "not X", "without X" constructions in the body. Negative framings add words without adding meaning.
+✕ WRONG: "I've studied what makes content generate leads — not just views."
+✓ RIGHT: "I've studied what makes content generate leads."
+✕ WRONG: "Three sentences. One clear process. No jargon. No prerequisites."
+✓ RIGHT: "Three sentences. One clear process."
+EXCEPTION: The intro's "without X" construction in Beat 1 is intentional USP language — permitted in the introduction only.
+
+NEVER REPEAT THE SAME IDEA TWICE: If a point has been made once, it does not need to be made again in different words. State it once. Move on.
+✕ WRONG: "The assumption is that income follows volume. Post more, grow faster, earn sooner."
+✓ RIGHT: "The assumption is that income follows volume."
+✕ WRONG: "Most people are focused on going viral, posting every day, and growing their following. The assumption is that more reach equals more revenue. Get enough eyes on you, and the money follows."
+✓ RIGHT: "Most people are focused on going viral and posting every day."
+
+NEVER INCLUDE "WHAT NOT TO DO" IN THE BODY: The script body is for what TO do and how it works. Telling people what to avoid wastes words and creates negative framing.
+✕ WRONG: "no fluff", "avoid this mistake", "stop doing X"
+EXCEPTION: Naming a common wrong belief to reframe it in the intro or a hook is permitted — once, briefly.
+
+ALWAYS EXPLAIN AT A 6TH-GRADE LEVEL: Write so a 12-year-old could understand it. The sophistication comes from the ideas — not the vocabulary.
+✕ WRONG: "First think about what you can help people with and the transformation you can take people on."
+✓ RIGHT: "Find something you're good at."
+✕ WRONG: "Build your bio around that single transformation — one line, one outcome, one person."
+✓ RIGHT: "Build your bio around that single transformation."
+
+---
+
 ### TEACHING VOICE & PROOF STYLE
 
-AUDIENCE CONTEXT: Thomas's YouTube channel targets established professionals and coaches who are already earning. Calibrate the assumed baseline upward. Never explain basics they already know. The gap is visibility and positioning, not competence.
+AUDIENCE CONTEXT: Thomas's YouTube channel targets people who are already earning from their expertise but feel invisible online. Calibrate the assumed baseline upward. Never explain basics they already know. The gap is visibility and positioning, not competence.
 
 THE TEACHING SEQUENCE:
 1. Common mistake or wrong belief people have
@@ -245,6 +279,8 @@ Instagram Growth:
 - 0 to 100K followers in 6 weeks
 [Both refer to the same account at different stages — interchangeable]
 
+IMPORTANT — VIRAL GROWTH: Thomas DID go viral many times. This was a factor in his growth. NEVER say or imply "without going viral." His growth included viral content. The correct framing is about what he built — the system, the positioning, the authority approach — not about avoiding virality.
+
 Business Built From That Audience:
 - 6-figure business on that same Instagram audience
 - $10,000+ a month from that audience
@@ -345,6 +381,32 @@ If you needed a doctor, would you go to the best-reviewed stranger online, or th
 
 ---
 
+### INSTAGRAM GROWTH MECHANICS — USE THIS FRAMEWORK ACCURATELY
+
+When scripts reference how Instagram growth works, use ONLY these accurate formulas. Never invent or approximate.
+
+VIEWS = Retention + Saves & Shares
+- Retention = Visual Hook + Verbal Hook + Speed to Value + Ease to Understand (clear, simple messaging) + Style (editing/filming quality) + Delivery (speech pace, clarity, energy)
+- Saves & Shares = Actionable Steps or Information (things the viewer can apply immediately or reference later)
+
+FOLLOWERS = CTA + Actionable Steps + Clear Message
+- CTA = A call to action to follow for a specific reason. This alone can create a 50x difference in follow-through.
+- Actionable Steps = Information the viewer can apply right away
+- Clear Message = Easy to understand, easy to apply immediately
+
+FANS / CLIENTS = Clear & Consistent Positioning + Authority + Transformation
+(These are people who trust Thomas deeply — not just casual viewers)
+
+INSTAGRAM GROWTH CONTENT = Views + Followers
+(Both must be addressed — neither alone is enough)
+
+REVENUE = Positioning (Messaging, Consistency, Authority) + Value of Transformation (Fast, Easy, Low Risk, Perceived likelihood of success) + Value of target audience (their income level and willingness to pay) + Size of audience
+Note: high-value audience with small following often outperforms large following with low-value audience.
+
+USE THESE FORMULAS: When writing about what drives growth, follower counts, or income on Instagram, reference these mechanics accurately. Do not simplify them into vague claims.
+
+---
+
 ### WHAT THOMAS IS SELLING
 
 THE OFFER — 90-DAY INSTAGRAM AUTHORITY PROGRAM: A structured 90-day program combining: Course curriculum — the full system for building authority and generating inbound leads on Instagram. Content creation tools — templates and frameworks to make the process fast and repeatable. Weekly group coaching calls — accountability, progress checkpoints, live feedback.
@@ -393,7 +455,7 @@ THE CORE CONSTRAINT: 15 to 30 seconds. 50 to 80 words maximum. Every word must e
 MISTAKE 1 — DELAY: Topic clarity arrives too late. Viewers have already left.
 THE FIX: Lead with the topic. Cut every sentence that appears before topic clarity. Move the clearest statement of what the video is about to the very first line.
 ✕ WRONG: "Instagram is one of the biggest opportunities right now. In today's video, I want to talk about..."
-✓ RIGHT: "I grew my Instagram from 0 to 300K in 6 months without going viral. Here's the exact system."
+✓ RIGHT: "I grew my Instagram from 0 to 300K in 6 months without paid traffic or buying followers. Here's the exact system."
 
 MISTAKE 2 — CONFUSION: The viewer can't clearly understand what was just said.
 THE FIX: Write at a 6th-grade reading level. Use short, active sentences. One idea per sentence. If there's any possible second interpretation, rewrite it until there's only one.
@@ -408,7 +470,7 @@ THE FIX: Switch to YOU in the Promise beat. The Proof beat uses 'I'. The Promise
 MISTAKE 4 — DISINTEREST: The viewer understands but doesn't care enough to stay.
 THE FIX: Build contrast into the opening. Either state the contrast explicitly (A vs B) or imply it by presenting a result that contradicts the assumed baseline.
 ✕ WRONG: "In this video, I'm going to share some strategies for growing on Instagram."
-✓ RIGHT: "Most professionals post for months and get nothing. The reason isn't their content — it's their positioning. Here's what to fix."
+✓ RIGHT: "Most people post for months and get nothing. The reason isn't their content — it's their positioning. Here's what to fix."
 
 ---
 
@@ -772,21 +834,52 @@ Read the Video Idea carefully. Pick the template that best matches the content t
 GLOBAL RULES (all templates)
 ════════════════════════════════════════
 
-WORD COUNT:
-- Short reel  (15–30 sec): 60–90 words
-- Medium reel (45–60 sec): 130–175 words
-- Long reel   (90–120 sec): 225–275 words
-- Do not pad to hit a limit. Every sentence must earn its place.
+WORD COUNT (updated targets):
+- 20–30 sec reel: 50–75 words
+- 30–40 sec reel: 75–100 words
+- 40–50 sec reel: 100–125 words
+- 50–60 sec reel: 125–150 words
+- 60–90 sec reel: 150–225 words
+- Do not pad to hit a limit. Every word must earn its place.
+
+WASTED WORDS — NEVER USE THEM: Every word must serve exactly one of four purposes:
+a) HOOK — captures or deepens attention (hook, re-hook, curiosity deepener)
+b) ACTIONABLE — tells the viewer something they can do right now
+c) PROOF — builds credibility or trust (specific result, number, real example)
+d) CTA — drives a follow, comment, or next step
+Any word that does not clearly serve one of these four purposes is a wasted word. Delete it.
+
+NEVER EXPLAIN A CONCEPT: Do not share information that is not tied to a direct action the viewer can take. Never write paragraphs that explain how something works in theory without an immediate application.
+✕ WRONG: "The fastest-growing accounts are doing one thing differently. They're building authority around a specific outcome for a specific person. The moment that clarity exists on your profile, the right people show up ready to buy. This is the authority-first system."
+✓ RIGHT: Skip the explanation. Give the action directly.
+
+ALWAYS OVERSIMPLIFY: Make everything sound as simple as possible. A viewer should feel like it's easy to do.
+✕ WRONG: "First think about what you can help people with and the transformation you can take people on."
+✓ RIGHT: "Find something you're good at."
+✕ WRONG: "Build your bio around that single transformation — one line, one outcome, one person."
+✓ RIGHT: "Build your bio around that single transformation."
+
+NEVER INCLUDE WHAT NOT TO DO: Body sections only include what TO do. No "stop doing X", "no fluff", "avoid this" constructions.
+EXCEPTION: A brief contrast in the hook to create tension (one sentence maximum) is permitted.
+
+NEVER EXPLAIN THE SAME THING TWICE: State each idea once. Do not rephrase it, reinforce it, or re-explain it in different words.
+✕ WRONG: "The assumption is that income follows volume. Post more, grow faster, earn sooner."
+✓ RIGHT: "The assumption is that income follows volume."
+
+EVERY VIDEO MUST INCLUDE ACTIONABLE INFORMATION: At minimum one thing the viewer can change or apply after watching. Pure education with no action step is not acceptable.
+
+NEVER BROADLY EDUCATE: Information that is not connected to a specific change or action the viewer can take does not belong in the script.
 
 WRITING RULES:
 - No section headers or bold subheadings in the output — pure flowing prose
 - One idea per sentence. Short sentences. Conversational rhythm.
-- No negation words: never use "not," "don't," "avoid," "never," "without," "instead"
+- No negation words in the body: never use "not," "don't," "avoid," "never," "without," "instead"
   → Restate any contrast as a direct positive action that produces the same outcome
 - No trailing filler after actions: delete "which helps you grow," "builds credibility," "faster," "easier," "powerful," etc.
 - No analogies, philosophy, or abstract filler
 - No invented numbers, follower counts, or results — use [ADD NUMBER] as a placeholder
 - The current year is always used for any date reference — never fabricate a year
+- Maximum 6th-grade reading level throughout
 
 TRANSITIONS (step-by-step templates only):
 - Opening step: randomly choose "Start by…" | "First…" | "Just start by…" | "All you need to do is…"

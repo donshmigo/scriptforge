@@ -36,20 +36,35 @@ export interface GenerateRequest {
   personaId?: string;
   apiKey: string;
   anthropicApiKey?: string;
+  // Revision mode — when both are provided, revise the existing script
+  currentScript?: string;
+  feedbackMessage?: string;
 }
 
 const YOUTUBE_LENGTH_TARGETS: Record<string, { words: string; duration: string; maxTokens: number }> = {
-  short:  { words: "750–1,050",   duration: "5–7 minutes",   maxTokens: 2500 },
-  medium: { words: "1,500–2,250", duration: "10–15 minutes", maxTokens: 4096 },
-  long:   { words: "3,000+",      duration: "20+ minutes",   maxTokens: 6000 },
+  "1": { words: "870–1,160",   duration: "6–8 minutes",   maxTokens: 3000 },
+  "2": { words: "1,160–1,450", duration: "8–10 minutes",  maxTokens: 3500 },
+  "3": { words: "1,450–1,740", duration: "10–12 minutes", maxTokens: 4200 },
+  "4": { words: "1,740–2,175", duration: "12–15 minutes", maxTokens: 5000 },
+  "5": { words: "2,175–2,900", duration: "15–20 minutes", maxTokens: 6500 },
+  // legacy keys
+  short:  { words: "870–1,160",   duration: "6–8 minutes",   maxTokens: 3000 },
+  medium: { words: "1,450–1,740", duration: "10–12 minutes", maxTokens: 4200 },
+  long:   { words: "2,175–2,900", duration: "15–20 minutes", maxTokens: 6500 },
 };
 
 // Instagram Reels / TikTok — ~150 WPM speaking pace
 // maxTokens includes room for the script + 3 hook alternatives (~150 extra tokens)
 const REELS_LENGTH_TARGETS: Record<string, { words: string; duration: string; maxTokens: number; wpm: number }> = {
-  short:  { words: "60–90",   duration: "15–30 seconds", maxTokens: 700,  wpm: 150 },
-  medium: { words: "130–180", duration: "45–60 seconds", maxTokens: 1000, wpm: 150 },
-  long:   { words: "225–300", duration: "90–120 seconds", maxTokens: 1400, wpm: 150 },
+  "1": { words: "50–75",   duration: "20–30 seconds", maxTokens: 600,  wpm: 150 },
+  "2": { words: "75–100",  duration: "30–40 seconds", maxTokens: 700,  wpm: 150 },
+  "3": { words: "100–125", duration: "40–50 seconds", maxTokens: 800,  wpm: 150 },
+  "4": { words: "125–150", duration: "50–60 seconds", maxTokens: 900,  wpm: 150 },
+  "5": { words: "150–225", duration: "60–90 seconds", maxTokens: 1100, wpm: 150 },
+  // legacy keys
+  short:  { words: "50–75",   duration: "20–30 seconds", maxTokens: 600,  wpm: 150 },
+  medium: { words: "100–125", duration: "40–50 seconds", maxTokens: 800,  wpm: 150 },
+  long:   { words: "150–225", duration: "60–90 seconds", maxTokens: 1100, wpm: 150 },
 };
 
 export async function POST(req: NextRequest) {
@@ -72,6 +87,8 @@ export async function POST(req: NextRequest) {
       personaId = "thomas",
       apiKey,
       anthropicApiKey,
+      currentScript,
+      feedbackMessage,
     } = body;
 
     // Fall back to server-side env vars — client-provided keys take precedence
@@ -319,6 +336,39 @@ OUTPUT FORMAT:
 
 Write the complete script now:`;
 
+    // ── REVISION MODE ─────────────────────────────────────────────────────────
+    // When currentScript + feedbackMessage are both provided, revise the existing script.
+    const isRevision = !!(currentScript?.trim() && feedbackMessage?.trim());
+
+    const finalSystemPrompt = isRevision
+      ? `You are revising a ${isReels ? "short-form Reels/TikTok" : "YouTube"} script. Apply the user's feedback precisely.
+
+WRITING STYLE (maintain throughout):
+${persona.styleGuide}
+
+CREATOR IDENTITY (use only these proof points):
+${identitySection}
+
+REVISION RULES:
+- Change only what the feedback requests. Leave everything else exactly as written.
+- Return the COMPLETE revised script — not just the changed section.
+- Maintain all original formatting: bold subheadings, section structure, production notes.
+- Do not add commentary, preambles, or explanations — output the script only.`
+      : systemPrompt;
+
+    const finalUserPrompt = isRevision
+      ? `CURRENT SCRIPT:
+${currentScript}
+
+USER FEEDBACK: ${feedbackMessage}
+
+Return the complete revised script now:`
+      : userPrompt;
+
+    const revisionMaxTokens = isRevision
+      ? Math.max(lengthTarget.maxTokens, 3000)
+      : lengthTarget.maxTokens;
+
     // ── GENERATION ────────────────────────────────────────────────────────────
     let raw = "";
 
@@ -327,10 +377,10 @@ Write the complete script now:`;
       const message = await withRetry(() =>
         anthropic.messages.create({
           model: "claude-sonnet-4-6",
-          max_tokens: lengthTarget.maxTokens,
+          max_tokens: revisionMaxTokens,
           temperature: 0.65,
-          system: systemPrompt,
-          messages: [{ role: "user", content: userPrompt }],
+          system: finalSystemPrompt,
+          messages: [{ role: "user", content: finalUserPrompt }],
         })
       );
       raw = (message.content[0] as { type: string; text: string })?.text ?? "";
@@ -340,11 +390,11 @@ Write the complete script now:`;
         openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
+            { role: "system", content: finalSystemPrompt },
+            { role: "user", content: finalUserPrompt },
           ],
           temperature: 0.65,
-          max_tokens: lengthTarget.maxTokens,
+          max_tokens: revisionMaxTokens,
         })
       );
       raw = completion.choices[0]?.message?.content ?? "";
