@@ -97,6 +97,10 @@ export default function EditProfileModal({
   const [analyzeSuccess, setAnalyzeSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Channel scrape
+  const [scrapeLoading, setScrapeLoading] = useState(false);
+  const [scrapeStatus, setScrapeStatus] = useState("");
+
   // Transcript import
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const [transcriptStatus, setTranscriptStatus] = useState("");
@@ -253,6 +257,38 @@ export default function EditProfileModal({
     if (id.contentStyle)      setContentStyle(id.contentStyle);
   }, [personaId]);
 
+  const handleScrapeChannel = useCallback(async () => {
+    if (!channelUrl.trim()) return;
+    setScrapeLoading(true);
+    setScrapeStatus("Fetching channel…");
+    try {
+      const res = await fetch("/api/scrape-channel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelUrl: channelUrl.trim(), apiKey: "" }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setScrapeStatus(data.error || "Could not reach channel. Check the URL and try again.");
+        return;
+      }
+      if (data.identityExtract) {
+        const { credibilityStack: cs, uniqueMethod: um, contraryBelief: cb, targetPerson: tp } = data.identityExtract;
+        if (cs) setCredibilityStack(cs);
+        if (um) setUniqueMethod(um);
+        if (cb) setContraryBelief(cb);
+        if (tp) setTargetPerson(tp);
+        setScrapeStatus(`✓ Pre-filled from channel${data.videos?.length ? ` · ${data.videos.length} videos found` : ""}`);
+      } else {
+        setScrapeStatus("Channel found but no identity data extracted. Fill in fields manually.");
+      }
+    } catch {
+      setScrapeStatus("Network error — check your connection and try again.");
+    } finally {
+      setScrapeLoading(false);
+    }
+  }, [channelUrl]);
+
   const handleGuideFileUpload = useCallback(async (
     files: FileList | null,
     setter: (text: string) => void,
@@ -394,23 +430,43 @@ export default function EditProfileModal({
                   onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
                 />
               </Field>
-              <Field label="Channel URL" hint="Optional — stored for context only.">
-                <input
-                  type="text"
-                  value={channelUrl}
-                  onChange={(e) => setChannelUrl(e.target.value)}
-                  placeholder="https://youtube.com/@yourhandle"
-                  className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
-                  style={INPUT_STYLE}
-                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                />
+              <Field label="Channel URL" hint="Paste your YouTube channel URL and click Fetch to auto-fill your identity fields.">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={channelUrl}
+                    onChange={(e) => { setChannelUrl(e.target.value); setScrapeStatus(""); }}
+                    placeholder="https://youtube.com/@yourhandle"
+                    className="flex-1 rounded-lg px-3 py-2.5 text-sm outline-none min-w-0"
+                    style={INPUT_STYLE}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                    onKeyDown={(e) => e.key === "Enter" && handleScrapeChannel()}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleScrapeChannel}
+                    disabled={scrapeLoading || !channelUrl.trim()}
+                    className="flex-shrink-0 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)", whiteSpace: "nowrap" }}
+                  >
+                    {scrapeLoading
+                      ? <><span className="w-3 h-3 rounded-full border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" />Fetching…</>
+                      : "Fetch & Pre-fill →"}
+                  </button>
+                </div>
+                {scrapeStatus && (
+                  <p className="text-xs mt-1.5" style={{ color: scrapeStatus.startsWith("✓") ? "var(--green)" : "var(--muted)" }}>
+                    {scrapeStatus}
+                  </p>
+                )}
               </Field>
               <Field label="Credibility Stack" hint="Specific results, numbers, proof points the AI draws on to establish your authority.">
                 <textarea
                   value={credibilityStack}
                   onChange={(e) => setCredibilityStack(e.target.value)}
                   rows={4}
+                  placeholder={"Specific results, numbers, proof points the AI draws on to establish your authority.\n\ne.g. 10 years in the industry. Grew revenue from $0 to $2M. Trained 400+ clients."}
                   className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
                   style={INPUT_STYLE}
                   onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
@@ -422,6 +478,7 @@ export default function EditProfileModal({
                   value={uniqueMethod}
                   onChange={(e) => setUniqueMethod(e.target.value)}
                   rows={3}
+                  placeholder={"How you specifically approach your topic — your named system or distinctive sequence.\n\ne.g. The 3-Phase Protocol: fix the habit loop first, then environment, then execution."}
                   className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
                   style={INPUT_STYLE}
                   onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
@@ -433,6 +490,7 @@ export default function EditProfileModal({
                   value={contraryBelief}
                   onChange={(e) => setContraryBelief(e.target.value)}
                   rows={3}
+                  placeholder={"What you believe that most people in your space get wrong — your edge and angle.\n\ne.g. Most people optimise for reach. The real lever is trust. A 500-person audience that trusts you beats 500K who don't."}
                   className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
                   style={INPUT_STYLE}
                   onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
@@ -444,6 +502,7 @@ export default function EditProfileModal({
                   type="text"
                   value={targetPerson}
                   onChange={(e) => setTargetPerson(e.target.value)}
+                  placeholder="The specific person this content is made for — their situation, problem, and goal."
                   className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
                   style={INPUT_STYLE}
                   onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
