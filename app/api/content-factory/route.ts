@@ -108,7 +108,47 @@ CRITICAL for fullScript:
 - Every word must serve Hook, Actionable, Proof, or CTA — no wasted words.
 - No section headers, bold text, or labels in the output — pure spoken prose.
 - No brackets, no parentheses, no placeholders remaining.
-- Ideal length: 150–200 words for most types. Step-by-step: 250–275 words. Selling: 125–150 words.
+
+MANDATORY WORD COUNT — scripts that are too short will be rejected:
+- Educational: 150–200 words MINIMUM. Hit the full range, do not stop early.
+- Myth: 150–200 words MINIMUM.
+- Comparison: 150–200 words MINIMUM.
+- List: 150–200 words MINIMUM. Use 5–7 list items to fill the count.
+- Step-by-step / Tutorial: 250–275 words MINIMUM. Use 4–5 full steps with detail.
+- Selling: 125–150 words MINIMUM.
+Count words before submitting. If you are under the minimum, add more actionable detail — do not pad with filler.
+
+6TH GRADE READING LEVEL — MANDATORY:
+Every word must be simple. A 12-year-old must understand every sentence instantly.
+BANNED words and phrases — replace with the simpler version shown:
+✕ progressive overload → ✓ lift more than last time
+✕ optimise / optimize → ✓ improve / make better
+✕ implement → ✓ use / do / start
+✕ leverage → ✓ use
+✕ monetise / monetize → ✓ make money from
+✕ algorithm → ✓ the app / what the app shows people
+✕ engagement → ✓ likes, comments, shares / people interacting
+✕ aesthetic → ✓ look / style
+✕ content strategy → ✓ what you post and when
+✕ niche → ✓ topic / what you talk about
+✕ authority → ✓ trust / being seen as the go-to person
+✕ credibility → ✓ trust / proof / track record
+✕ conversion → ✓ people buying / people signing up
+✕ retention → ✓ people watching to the end / keeping people watching
+✕ positioning → ✓ how people see you / what you're known for
+✕ transformation → ✓ change / result / going from X to Y
+✕ manifestation → ✓ thinking about what you want
+✕ holistic → ✓ all-around / full
+✕ framework → ✓ plan / system / steps
+✕ systematic → ✓ step by step
+✕ consistency → ✓ showing up / posting regularly / doing it every week
+✕ trajectory → ✓ direction / path / where you're headed
+✕ cadence → ✓ schedule / how often
+✕ modality → ✓ type / way / method
+✕ facilitate → ✓ help / make easier
+✕ cultivate → ✓ build / grow
+✕ resilience → ✓ bouncing back / not giving up
+If unsure whether a word is simple enough — replace it. Default to the shortest, most common word that means the same thing.`
 
 "calendar" — array of exactly 30 objects (Day 1 to 30). Each object:
 - day: number (1 to 30)
