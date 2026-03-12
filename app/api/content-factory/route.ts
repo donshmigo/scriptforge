@@ -66,17 +66,22 @@ const SECTION_MAP: Record<string, string[]> = {
 
 // ── Single-script generator (mirrors /api/generate Reels exactly) ──────────
 
+interface ScriptResult {
+  raw: string;
+  altHooks: string[];
+}
+
 async function generateReelScript(
   openai: OpenAI,
   topic: string,
   contentType: string,
   niche: string,
-): Promise<string> {
+  currentYear: number,
+): Promise<ScriptResult> {
   const templateName = TEMPLATE_NAME_MAP[contentType] ?? "TEMPLATE 1 — EDUCATIONAL";
   const sections = SECTION_MAP[templateName] ?? SECTION_MAP["TEMPLATE 1 — EDUCATIONAL"];
   const hookLib = hooksForType(contentType);
   const cta = `Follow for more ${niche} content.`;
-  // Use length "5" (150–225 words / 60–90 sec) as the standard for content plan scripts
   const wordTarget = "150–225";
   const durationTarget = "60–90 seconds";
 
@@ -91,9 +96,11 @@ INPUT 1 — SCRIPT RULES
 BANNED → REPLACEMENT:
 progressive overload → lift more than last time | optimise → make better | implement → use/do | leverage → use | monetise → make money from | algorithm → what the app shows people | engagement → likes and comments | aesthetic → look/style | content strategy → what you post | niche → topic/what you talk about | authority → trust/being known for something | credibility → trust/proof | conversion → people buying | retention → people watching to the end | positioning → how people see you | transformation → change/result | framework → plan/steps | systematic → step by step | consistency → showing up regularly | trajectory → direction/path | cadence → how often | facilitate → help | cultivate → build/grow | resilience → bouncing back
 
+YEAR RULE: The current year is ${currentYear}. If you reference any year, it must be ${currentYear}. Never write 2023, 2024, or any year other than ${currentYear}.
+
 INPUT 2 — IDENTITY
 NICHE: ${niche}
-ANTI-FABRICATION: Do NOT invent specific follower counts, revenue figures, client results, or personal stories not grounded in this niche. Write as a trusted authority in ${niche} without fabricating specifics.
+ANTI-FABRICATION: Do NOT invent specific follower counts, revenue figures, client results, or personal stories. Write as a trusted authority in ${niche} without fabricating specifics.
 
 INPUT 5 — REELS GUIDE
 ${THOMAS_REELS_GUIDE}
@@ -107,7 +114,7 @@ CTA to use: "${cta}"
 ${hookLib}
 
 ABSOLUTE OUTPUT RULES:
-- No section headers or bold subheadings in the output — pure flowing spoken prose.
+- The final script output must be pure flowing spoken prose — NO ## section labels, NO subheadings, NO bold text.
 - No hype language, no "Hey guys", no "welcome back".
 - Every word must serve Hook, Actionable, Proof, or CTA — no wasted words.
 - Spoken words only. No brackets in the final script.`;
@@ -117,19 +124,15 @@ ABSOLUTE OUTPUT RULES:
 TOPIC: "${topic}"
 CONTENT TYPE: ${contentType}
 
-Write the opening hook — first 1–2 sentences. Lead with contrast, tension, a bold claim, or a provocative question. No warmup, no greeting. Start with the most compelling line.
+TARGET: ${wordTarget} spoken words. Count before finishing — expand with more actionable detail if under ${wordTarget.split("–")[0]} words.
 
-TARGET: ${wordTarget} spoken words. Count before finishing — if under ${wordTarget.split("–")[0]} words, expand with more actionable detail.
+OUTPUT: Write the full script as pure flowing spoken prose. No section headers, no subheadings, no labels. Start directly with the hook sentence.
 
-OUTPUT FORMAT — follow this structure exactly:
-${sections.map(s => `## ${s}\n[${s.toLowerCase()} content here]`).join("\n\n")}
+After the script, add this exact line:
+===ALTERNATIVE HOOKS===
+Then write exactly 2 alternative opening hook sentences (first sentence only), each on its own numbered line, drawn from different templates in the HOOK INSPIRATION LIBRARY. Both must be fully customised — no placeholders remaining.
 
-Rules:
-- Each section starts with its ## label on its own line, immediately followed by the spoken words.
-- Pure spoken prose within each section — no nested headers, no bullets.
-- End after the CTA section. Nothing after.
-
-Write the reel script now (starting with ## ${sections[0]}):`;
+Write the script now:`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -138,10 +141,19 @@ Write the reel script now (starting with ## ${sections[0]}):`;
       { role: "user", content: userPrompt },
     ],
     temperature: 0.75,
-    max_tokens: 1200,
+    max_tokens: 1400,
   });
 
-  return completion.choices[0]?.message?.content ?? "";
+  const raw = completion.choices[0]?.message?.content ?? "";
+
+  // Split script from alternative hooks
+  const [scriptPart, altPart] = raw.split(/===ALTERNATIVE HOOKS===/);
+  const altHooks = (altPart ?? "")
+    .split("\n")
+    .map(l => l.replace(/^\d+[\.\)]\s*/, "").trim())
+    .filter(l => l.length > 10);
+
+  return { raw: scriptPart?.trim() ?? "", altHooks: altHooks.slice(0, 2) };
 }
 
 // ── Calendar plan generator ────────────────────────────────────────────────
@@ -182,14 +194,15 @@ Return ONLY the JSON object.`;
   return parsed.calendar ?? [];
 }
 
-// ── Parse a labelled Reels script into a plain string ─────────────────────
+// ── Strip any stray section labels that GPT may still include ─────────────
 
-function parseScriptToString(raw: string): string {
-  // Strip ## section labels, keep just the spoken content
+function cleanScript(raw: string): string {
   return raw
-    .replace(/^===HOOK ALTERNATIVES===[\s\S]*/m, "")
-    .replace(/^## [A-Z\s/]+\n/gm, "")
-    .replace(/\[.*?\]/g, "")
+    .replace(/^===.*$/gm, "")           // remove delimiter lines
+    .replace(/^#{1,3} .+$/gm, "")       // remove any ## headings
+    .replace(/\*\*.+?\*\*/g, "")        // remove any **bold** labels
+    .replace(/\[.*?\]/g, "")            // remove [bracket] notes
+    .replace(/\n{3,}/g, "\n\n")         // collapse triple+ newlines
     .trim();
 }
 
@@ -211,6 +224,7 @@ export async function POST(req: NextRequest) {
     const openai = new OpenAI({ apiKey });
     const nicheClean = niche.trim();
     const cta = `Follow for more ${nicheClean} content.`;
+    const currentYear = new Date().getFullYear();
 
     // Step 1: Generate 30-day calendar (fast, no scripts)
     const calendar = await generateCalendarPlan(openai, nicheClean);
@@ -221,32 +235,25 @@ export async function POST(req: NextRequest) {
 
     // Step 2: Generate Day 1-3 full scripts in parallel
     // Each uses the EXACT same prompt structure as the main app's Reels generator
-    const [script1Raw, script2Raw, script3Raw] = await Promise.all([
-      generateReelScript(openai, calendar[0].topic, calendar[0].type, nicheClean),
-      generateReelScript(openai, calendar[1].topic, calendar[1].type, nicheClean),
-      generateReelScript(openai, calendar[2].topic, calendar[2].type, nicheClean),
+    const [result1, result2, result3] = await Promise.all([
+      generateReelScript(openai, calendar[0].topic, calendar[0].type, nicheClean, currentYear),
+      generateReelScript(openai, calendar[1].topic, calendar[1].type, nicheClean, currentYear),
+      generateReelScript(openai, calendar[2].topic, calendar[2].type, nicheClean, currentYear),
     ]);
 
-    // Extract hooks from the raw script outputs (## HOOK section)
-    function extractHookFromScript(raw: string): string {
-      const match = raw.match(/## HOOK\n([\s\S]*?)(?=\n## |\n===|$)/);
-      return match ? match[1].trim() : "";
-    }
+    const results = [result1, result2, result3];
 
-    const preview = [
-      { day: 1, type: calendar[0].type, topic: calendar[0].topic },
-      { day: 2, type: calendar[1].type, topic: calendar[1].topic },
-      { day: 3, type: calendar[2].type, topic: calendar[2].topic },
-    ].map((d, i) => {
-      const raw = [script1Raw, script2Raw, script3Raw][i];
-      const primaryHook = extractHookFromScript(raw);
-      const fullScript = parseScriptToString(raw);
+    const preview = [0, 1, 2].map((i) => {
+      const { raw, altHooks } = results[i];
+      const fullScript = cleanScript(raw);
+      // Primary hook = first sentence of the script
+      const primaryHook = fullScript.split(/[.!?]/)[0].trim() + ".";
       return {
-        day: d.day,
-        type: d.type,
-        topic: d.topic,
+        day: i + 1,
+        type: calendar[i].type,
+        topic: calendar[i].topic,
         primaryHook,
-        secondaryHooks: [] as string[],
+        secondaryHooks: altHooks,
         fullScript,
         caption: `${primaryHook} ${cta}`.trim(),
       };
