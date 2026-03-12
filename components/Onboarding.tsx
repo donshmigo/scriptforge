@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { DEFAULT_SAMPLE_SCRIPTS, type SampleScript } from "@/lib/scripts";
+import { type SampleScript } from "@/lib/scripts";
 import type { CreatorProfile, StyleProfile, ContentStyle } from "@/lib/types";
 import { WRITING_STYLES, type WritingStyle } from "@/lib/personas";
 
@@ -672,13 +672,6 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
       </div>
 
-      <button
-        onClick={() => setPendingScripts(DEFAULT_SAMPLE_SCRIPTS)}
-        className="w-full rounded-xl py-3 text-sm font-medium"
-        style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border-light)" }}
-      >
-        ✦ Load 5 pre-built sample scripts
-      </button>
 
       {pendingScripts.length > 0 && (
         <div className="flex flex-col gap-1.5">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
-import { DEFAULT_SAMPLE_SCRIPTS, type SampleScript } from "@/lib/scripts";
+import { type SampleScript } from "@/lib/scripts";
 import type { CreatorProfile, StyleProfile } from "@/lib/types";
 import { getWritingStyle } from "@/lib/personas";
 
@@ -630,13 +630,6 @@ export default function EditProfileModal({
                 </div>
                 <input ref={fileInputRef} type="file" multiple accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
 
-                <button
-                  onClick={() => setPendingScripts(DEFAULT_SAMPLE_SCRIPTS)}
-                  className="w-full rounded-xl py-2.5 text-xs font-medium mb-4"
-                  style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)" }}
-                >
-                  Load 5 pre-built sample scripts
-                </button>
 
                 {pendingScripts.length > 0 && (
                   <div className="flex flex-col gap-1 mb-4">
