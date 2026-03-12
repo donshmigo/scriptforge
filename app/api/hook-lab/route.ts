@@ -4,15 +4,12 @@ import { HOOK_LIBRARY } from "@/lib/hook-library";
 
 // Map UI video type labels → exact section headers in HOOK_LIBRARY
 const CATEGORY_MAP: Record<string, string> = {
-  "Educational":           "# Educational Hooks",
-  "Myth":                  "# Myth Hooks",
-  "Comparison":            "# Comparison Hooks",
-  "List":                  "# List Hooks",
-  "Authority":             "# Authority Hooks",
-  "Common Mistake":        "# Common Mistake Hooks",
-  "Selling":               "# Selling Hooks",
-  "Story-Telling":         "# Story-Telling Hooks",
-  "Tutorial/Step-by-Step": "# Tutorial/Step-by-Step Hooks",
+  "Educational":    "# Educational Hooks",
+  "Comparison":     "# Comparison Hooks",
+  "Myth":           "# Myth Hooks",
+  "Story-Telling":  "# Story-Telling Hooks",
+  "Authority":      "# Authority Hooks",
+  "Day in the Life":"# Day in the Life Hooks",
 };
 
 export async function POST(req: NextRequest) {
@@ -32,7 +29,7 @@ export async function POST(req: NextRequest) {
     const categoryHeader = isGeneral ? null : CATEGORY_MAP[videoType];
 
     const categoryInstruction = isGeneral
-      ? `The video type is "General". Randomly select 10 hook templates spread across any categories from the HOOK_LIBRARY. Pick diverse hooks from different sections.`
+      ? `The video type is "General". Randomly select 10 hook templates spread across ALL categories in the HOOK_LIBRARY. Pick diverse hooks from different sections — Educational, Comparison, Myth, Story-Telling, Authority, Day in the Life, and General.`
       : `The video type is "${videoType}". Find the section "${categoryHeader}" in the HOOK_LIBRARY and select 10 unique hook templates ONLY from that section.`;
 
     const systemInstruction = `You are Hook Lab, an expert at writing scroll-stopping Instagram Reel opening hooks. Your job is to generate 10 customized, ready-to-speak hooks for the user's Reel topic.

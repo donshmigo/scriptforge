@@ -6,14 +6,11 @@ import Link from "next/link";
 const VIDEO_TYPES = [
   "General",
   "Educational",
-  "Myth",
   "Comparison",
-  "List",
-  "Authority",
-  "Common Mistake",
-  "Selling",
+  "Myth",
   "Story-Telling",
-  "Tutorial/Step-by-Step",
+  "Authority",
+  "Day in the Life",
 ];
 
 const DAILY_LIMIT = 5;
