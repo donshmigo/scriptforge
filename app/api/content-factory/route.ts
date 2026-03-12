@@ -45,18 +45,10 @@ function extractHookSection(header: string): string[] {
   return hooks;
 }
 
-/** Pick n random items from an array */
-function sample<T>(arr: T[], n: number): T[] {
-  const copy = [...arr];
-  const out: T[] = [];
-  while (out.length < n && copy.length > 0) {
-    const i = Math.floor(Math.random() * copy.length);
-    out.push(copy.splice(i, 1)[0]);
-  }
-  return out;
-}
-
-/** Build a compact hook reference for the 3 Day 1-3 content types */
+/**
+ * Build hook reference using ALL hooks from each relevant section.
+ * GPT picks the best-fitting hook for each day's specific topic — same logic as Hook Lab.
+ */
 function buildHookReference(contentTypes: string[]): string {
   const seen = new Set<string>();
   const sections: string[] = [];
@@ -64,7 +56,7 @@ function buildHookReference(contentTypes: string[]): string {
     const header = HOOK_SECTION_MAP[type] ?? "# Educational Hooks";
     if (seen.has(header)) continue;
     seen.add(header);
-    const hooks = sample(extractHookSection(header), 15);
+    const hooks = extractHookSection(header);
     if (hooks.length > 0) {
       sections.push(`${header}\n${hooks.map(h => `- ${h}`).join("\n")}`);
     }
@@ -92,7 +84,7 @@ ${THOMAS_REELS_GUIDE}
 
 ════════════════════════════════════════
 HOOK REFERENCE (for Day 1–3 scripts only)
-Select the hook template that best fits the topic. Customise ALL placeholders.
+Read ALL templates in the relevant section. Pick the ONE that is the best structural fit for that day's specific topic — not just any hook. Customise ALL placeholders so no (insert X) text remains. The hook must be spoken words only.
 ════════════════════════════════════════
 ${hookReference}
 
@@ -159,7 +151,7 @@ export async function POST(req: NextRequest) {
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       temperature: 0.75,
-      max_tokens: 8000,
+      max_tokens: 9000,
     });
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
