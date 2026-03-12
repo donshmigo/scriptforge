@@ -3,35 +3,23 @@ import OpenAI from "openai";
 import { THOMAS_REELS_GUIDE } from "@/lib/thomas-guides";
 import { HOOK_LIBRARY } from "@/lib/hook-library";
 
-// Map content types → hook library section headers
+export const maxDuration = 300;
+
+// ── Hook library helpers ────────────────────────────────────────────────────
+
 const HOOK_SECTION_MAP: Record<string, string> = {
-  "Educational":            "# Educational Hooks",
-  "Myth":                   "# Myth Hooks",
-  "Comparison":             "# Comparison Hooks",
-  "List":                   "# Educational Hooks",
-  "Step-by-step / Tutorial":"# Educational Hooks",
-  "Selling":                "# Authority Hooks",
-  "Storytelling":           "# Story-Telling Hooks",
-  "Case Study / Results":   "# Authority Hooks",
-  "Common Mistake":         "# Myth Hooks",
+  "Educational":             "# Educational Hooks",
+  "Myth":                    "# Myth Hooks",
+  "Comparison":              "# Comparison Hooks",
+  "List":                    "# Educational Hooks",
+  "Step-by-step / Tutorial": "# Educational Hooks",
+  "Selling":                 "# Authority Hooks",
+  "Storytelling":            "# Story-Telling Hooks",
+  "Case Study / Results":    "# Authority Hooks",
+  "Common Mistake":          "# Myth Hooks",
   "Authority / FAQ / Quick Tip": "# Authority Hooks",
 };
 
-// Map content types → template name inside THOMAS_REELS_GUIDE
-const TEMPLATE_MAP: Record<string, string> = {
-  "Educational":            "TEMPLATE 1 — EDUCATIONAL",
-  "Myth":                   "TEMPLATE 2 — MYTH",
-  "Comparison":             "TEMPLATE 3 — COMPARISON",
-  "List":                   "TEMPLATE 4 — LIST",
-  "Step-by-step / Tutorial":"TEMPLATE 5 — LONGER EDUCATIONAL STEP-BY-STEP",
-  "Selling":                "TEMPLATE 6 — SELLING",
-  "Storytelling":           "TEMPLATE 1 — EDUCATIONAL",
-  "Case Study / Results":   "TEMPLATE 1 — EDUCATIONAL",
-  "Common Mistake":         "TEMPLATE 2 — MYTH",
-  "Authority / FAQ / Quick Tip": "TEMPLATE 1 — EDUCATIONAL",
-};
-
-/** Extract all hooks from a named section of HOOK_LIBRARY */
 function extractHookSection(header: string): string[] {
   const lines = HOOK_LIBRARY.split("\n");
   const hooks: string[] = [];
@@ -45,130 +33,167 @@ function extractHookSection(header: string): string[] {
   return hooks;
 }
 
-/**
- * Build hook reference using ALL hooks from each relevant section.
- * GPT picks the best-fitting hook for each day's specific topic — same logic as Hook Lab.
- */
-function buildHookReference(contentTypes: string[]): string {
-  const seen = new Set<string>();
-  const sections: string[] = [];
-  for (const type of contentTypes) {
-    const header = HOOK_SECTION_MAP[type] ?? "# Educational Hooks";
-    if (seen.has(header)) continue;
-    seen.add(header);
-    const hooks = extractHookSection(header);
-    if (hooks.length > 0) {
-      sections.push(`${header}\n${hooks.map(h => `- ${h}`).join("\n")}`);
-    }
-  }
-  return sections.join("\n\n");
+/** Return all hooks from the section matching this content type */
+function hooksForType(contentType: string): string {
+  const header = HOOK_SECTION_MAP[contentType] ?? "# Educational Hooks";
+  const hooks = extractHookSection(header);
+  return `HOOK INSPIRATION LIBRARY (${contentType})\nRead every template. Pick the ONE best-fitting hook for the topic. Customise ALL placeholders — no (insert X) text may remain in the output.\n\n${hooks.map(h => `- ${h}`).join("\n")}`;
 }
 
-function buildPrompt(niche: string): string {
+// ── Template / section maps ────────────────────────────────────────────────
+
+const TEMPLATE_NAME_MAP: Record<string, string> = {
+  "Educational":             "TEMPLATE 1 — EDUCATIONAL",
+  "Myth":                    "TEMPLATE 2 — MYTH",
+  "Comparison":              "TEMPLATE 3 — COMPARISON",
+  "List":                    "TEMPLATE 4 — LIST",
+  "Step-by-step / Tutorial": "TEMPLATE 5 — LONGER EDUCATIONAL STEP-BY-STEP",
+  "Selling":                 "TEMPLATE 6 — SELLING",
+  "Storytelling":            "TEMPLATE 1 — EDUCATIONAL",
+  "Case Study / Results":    "TEMPLATE 1 — EDUCATIONAL",
+  "Common Mistake":          "TEMPLATE 2 — MYTH",
+  "Authority / FAQ / Quick Tip": "TEMPLATE 1 — EDUCATIONAL",
+};
+
+const SECTION_MAP: Record<string, string[]> = {
+  "TEMPLATE 1 — EDUCATIONAL":                  ["HOOK", "REINFORCE HOOK", "MAIN POINT 1", "CONTRAST", "MAIN POINT 2", "CTA"],
+  "TEMPLATE 2 — MYTH":                          ["HOOK", "EXPLAIN MYTH", "CHALLENGE MYTH", "MAIN POINT", "REITERATE", "CTA"],
+  "TEMPLATE 3 — COMPARISON":                    ["HOOK", "EXPLAIN BELIEF", "SIMPLIFY", "MAIN POINT", "REITERATE", "CTA"],
+  "TEMPLATE 4 — LIST":                          ["HOOK", "REINFORCE", "THE LIST", "CTA"],
+  "TEMPLATE 5 — LONGER EDUCATIONAL STEP-BY-STEP": ["HOOK", "DEEPEN HOOK", "EXPLAIN CONCEPT", "THE STEPS", "SHOWCASE RESULTS", "CTA"],
+  "TEMPLATE 6 — SELLING":                       ["HOOK", "SOLUTION", "THE STEPS", "CTA"],
+};
+
+// ── Single-script generator (mirrors /api/generate Reels exactly) ──────────
+
+async function generateReelScript(
+  openai: OpenAI,
+  topic: string,
+  contentType: string,
+  niche: string,
+): Promise<string> {
+  const templateName = TEMPLATE_NAME_MAP[contentType] ?? "TEMPLATE 1 — EDUCATIONAL";
+  const sections = SECTION_MAP[templateName] ?? SECTION_MAP["TEMPLATE 1 — EDUCATIONAL"];
+  const hookLib = hooksForType(contentType);
   const cta = `Follow for more ${niche} content.`;
+  // Use length "5" (150–225 words / 60–90 sec) as the standard for content plan scripts
+  const wordTarget = "150–225";
+  const durationTarget = "60–90 seconds";
 
-  // Day 1-3 must use these types only — gather hooks for them in advance
-  const day13Types = ["Educational", "Myth", "Comparison", "List", "Step-by-step / Tutorial", "Selling"];
-  const hookReference = buildHookReference(day13Types);
+  const systemPrompt = `You are writing a short-form Instagram Reels script. Each input governs exactly one domain.
 
-  return `You are an expert Instagram Reels content strategist and short-form scriptwriter. Generate a complete 30-day content plan including full scripts for Day 1, 2, and 3.
+CONFLICT RESOLUTION:
+- Language, tone, word choice, sentence structure → INPUT 1 (Script Rules)
+- Short-form structure, template choice, word targets → INPUT 5 (Reels Guide)
 
-USER INPUT:
-- Niche: "${niche}"
+INPUT 1 — SCRIPT RULES
+6th-grade reading level. Simple words only.
+BANNED → REPLACEMENT:
+progressive overload → lift more than last time | optimise → make better | implement → use/do | leverage → use | monetise → make money from | algorithm → what the app shows people | engagement → likes and comments | aesthetic → look/style | content strategy → what you post | niche → topic/what you talk about | authority → trust/being known for something | credibility → trust/proof | conversion → people buying | retention → people watching to the end | positioning → how people see you | transformation → change/result | framework → plan/steps | systematic → step by step | consistency → showing up regularly | trajectory → direction/path | cadence → how often | facilitate → help | cultivate → build/grow | resilience → bouncing back
 
-════════════════════════════════════════
-SHORT-FORM SCRIPT RULES — MANDATORY
-Apply these rules to every fullScript you write for Day 1, 2, and 3.
-════════════════════════════════════════
+INPUT 2 — IDENTITY
+NICHE: ${niche}
+ANTI-FABRICATION: Do NOT invent specific follower counts, revenue figures, client results, or personal stories not grounded in this niche. Write as a trusted authority in ${niche} without fabricating specifics.
+
+INPUT 5 — REELS GUIDE
 ${THOMAS_REELS_GUIDE}
 
-════════════════════════════════════════
-HOOK REFERENCE (for Day 1–3 scripts only)
-Read ALL templates in the relevant section. Pick the ONE that is the best structural fit for that day's specific topic — not just any hook. Customise ALL placeholders so no (insert X) text remains. The hook must be spoken words only.
-════════════════════════════════════════
-${hookReference}
+SELECTED TEMPLATE: ${templateName}. Follow its formula, section structure, and word-count rules exactly.
 
-════════════════════════════════════════
-OUTPUT REQUIREMENTS
-════════════════════════════════════════
-Return a single valid JSON object with exactly two top-level keys: "preview" and "calendar".
+TARGET: ${wordTarget} spoken words (≈ ${durationTarget} at ~150 WPM). Hit this range. Do not stop early.
 
-"preview" — array of exactly 3 objects (Day 1, 2, 3). Each object:
-- day: number (1, 2, or 3)
-- type: string (content type — must be from Day 1-3 allowed list below)
-- topic: string (main topic, max 12 words)
-- primaryHook: string (fully written spoken hook — NO placeholders, NO brackets, ready to say on camera)
-- secondaryHooks: string[] (exactly 2 alternative hooks — also fully written, no placeholders)
-- fullScript: string (the complete spoken script as a single string — NO section labels, NO headers, NO brackets, NO placeholders, NO stage directions — pure flowing prose/speech exactly as it would be spoken, following all SHORT-FORM SCRIPT RULES and the matching template above)
-- caption: string (max 100 words: hook reworded + 1-sentence summary + CTA: "${cta}")
+CTA to use: "${cta}"
 
-CRITICAL for fullScript:
-- fullScript must be a plain string, not an object.
-- Follow the exact template structure from the SHORT-FORM SCRIPT RULES above that matches the day's content type.
+${hookLib}
+
+ABSOLUTE OUTPUT RULES:
+- No section headers or bold subheadings in the output — pure flowing spoken prose.
+- No hype language, no "Hey guys", no "welcome back".
 - Every word must serve Hook, Actionable, Proof, or CTA — no wasted words.
-- No section headers, bold text, or labels in the output — pure spoken prose.
-- No brackets, no parentheses, no placeholders remaining.
+- Spoken words only. No brackets in the final script.`;
 
-MANDATORY WORD COUNT — scripts that are too short will be rejected:
-- Educational: 150–200 words MINIMUM. Hit the full range, do not stop early.
-- Myth: 150–200 words MINIMUM.
-- Comparison: 150–200 words MINIMUM.
-- List: 150–200 words MINIMUM. Use 5–7 list items to fill the count.
-- Step-by-step / Tutorial: 250–275 words MINIMUM. Use 4–5 full steps with detail.
-- Selling: 125–150 words MINIMUM.
-Count words before submitting. If you are under the minimum, add more actionable detail — do not pad with filler.
+  const userPrompt = `Write a complete Instagram Reel script.
 
-6TH GRADE READING LEVEL — MANDATORY:
-Every word must be simple. A 12-year-old must understand every sentence instantly.
-BANNED words and phrases — replace with the simpler version shown:
-✕ progressive overload → ✓ lift more than last time
-✕ optimise / optimize → ✓ improve / make better
-✕ implement → ✓ use / do / start
-✕ leverage → ✓ use
-✕ monetise / monetize → ✓ make money from
-✕ algorithm → ✓ the app / what the app shows people
-✕ engagement → ✓ likes, comments, shares / people interacting
-✕ aesthetic → ✓ look / style
-✕ content strategy → ✓ what you post and when
-✕ niche → ✓ topic / what you talk about
-✕ authority → ✓ trust / being seen as the go-to person
-✕ credibility → ✓ trust / proof / track record
-✕ conversion → ✓ people buying / people signing up
-✕ retention → ✓ people watching to the end / keeping people watching
-✕ positioning → ✓ how people see you / what you're known for
-✕ transformation → ✓ change / result / going from X to Y
-✕ manifestation → ✓ thinking about what you want
-✕ holistic → ✓ all-around / full
-✕ framework → ✓ plan / system / steps
-✕ systematic → ✓ step by step
-✕ consistency → ✓ showing up / posting regularly / doing it every week
-✕ trajectory → ✓ direction / path / where you're headed
-✕ cadence → ✓ schedule / how often
-✕ modality → ✓ type / way / method
-✕ facilitate → ✓ help / make easier
-✕ cultivate → ✓ build / grow
-✕ resilience → ✓ bouncing back / not giving up
-If unsure whether a word is simple enough — replace it. Default to the shortest, most common word that means the same thing.`
+TOPIC: "${topic}"
+CONTENT TYPE: ${contentType}
 
-"calendar" — array of exactly 30 objects (Day 1 to 30). Each object:
-- day: number (1 to 30)
-- type: string (content category)
-- topic: string (main topic for that day, max 12 words)
+Write the opening hook — first 1–2 sentences. Lead with contrast, tension, a bold claim, or a provocative question. No warmup, no greeting. Start with the most compelling line.
 
-PLANNING RULES:
-1. Distribution (Exact across 30 days): List: 4, Educational: 4, Common Mistake: 3, Myth: 3, Step-by-step / Tutorial: 5, Storytelling: 2, Case Study / Results: 3, Comparison: 3, Authority / FAQ / Quick Tip: 3.
-2. Scheduling: No single content type may appear more than twice in any 7-day window.
-3. All topics must be relevant to the niche: "${niche}". Max 12 words per topic.
-4. Day 1-3 content types MUST be from: Educational, Myth, Comparison, List, Step-by-step / Tutorial, or Selling.
-5. CTA for all content: "${cta}"
+TARGET: ${wordTarget} spoken words. Count before finishing — if under ${wordTarget.split("–")[0]} words, expand with more actionable detail.
 
-ANTI-FABRICATION:
-- For Storytelling: Do NOT invent specific outcomes, client results, or revenue figures. Keep it general and relatable.
-- For Case Study / Results: No fabricated numbers, timelines, or client outcomes.
-- Never invent statistics, follower counts, or dates.
+OUTPUT FORMAT — follow this structure exactly:
+${sections.map(s => `## ${s}\n[${s.toLowerCase()} content here]`).join("\n\n")}
 
-Generate the JSON object now.`;
+Rules:
+- Each section starts with its ## label on its own line, immediately followed by the spoken words.
+- Pure spoken prose within each section — no nested headers, no bullets.
+- End after the CTA section. Nothing after.
+
+Write the reel script now (starting with ## ${sections[0]}):`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.75,
+    max_tokens: 1200,
+  });
+
+  return completion.choices[0]?.message?.content ?? "";
 }
+
+// ── Calendar plan generator ────────────────────────────────────────────────
+
+async function generateCalendarPlan(
+  openai: OpenAI,
+  niche: string,
+): Promise<{ day: number; type: string; topic: string; primaryHook?: string; secondaryHooks?: string[]; caption?: string }[]> {
+  const prompt = `You are an Instagram content strategist. Generate a 30-day Reels content calendar for the niche: "${niche}".
+
+Return a JSON object with one key: "calendar" — an array of exactly 30 objects.
+Each object:
+- day: number (1 to 30)
+- type: string (content category from the distribution below)
+- topic: string (specific topic for that day, max 12 words, relevant to "${niche}")
+
+DISTRIBUTION (exact): Educational: 4, List: 4, Step-by-step / Tutorial: 5, Myth: 3, Comparison: 3, Common Mistake: 3, Case Study / Results: 3, Storytelling: 2, Authority / FAQ / Quick Tip: 3.
+Total = 30.
+
+RULES:
+- No single content type may appear more than twice in any 7-day window.
+- Day 1, 2, and 3 must use only: Educational, Myth, Comparison, List, Step-by-step / Tutorial, or Selling.
+- All topics must be specific and relevant to "${niche}".
+- Topics must be 12 words or less.
+
+Return ONLY the JSON object.`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    temperature: 0.7,
+    max_tokens: 3000,
+  });
+
+  const raw = completion.choices[0]?.message?.content ?? "{}";
+  const parsed = JSON.parse(raw);
+  return parsed.calendar ?? [];
+}
+
+// ── Parse a labelled Reels script into a plain string ─────────────────────
+
+function parseScriptToString(raw: string): string {
+  // Strip ## section labels, keep just the spoken content
+  return raw
+    .replace(/^===HOOK ALTERNATIVES===[\s\S]*/m, "")
+    .replace(/^## [A-Z\s/]+\n/gm, "")
+    .replace(/\[.*?\]/g, "")
+    .trim();
+}
+
+// ── Route handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
@@ -184,34 +209,50 @@ export async function POST(req: NextRequest) {
     }
 
     const openai = new OpenAI({ apiKey });
-    const prompt = buildPrompt(niche.trim());
+    const nicheClean = niche.trim();
+    const cta = `Follow for more ${nicheClean} content.`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 0.75,
-      max_tokens: 9000,
-    });
+    // Step 1: Generate 30-day calendar (fast, no scripts)
+    const calendar = await generateCalendarPlan(openai, nicheClean);
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
-    const plan = JSON.parse(raw);
-
-    if (!plan.preview || !plan.calendar || plan.calendar.length !== 30) {
-      throw new Error("Invalid plan structure received. Please try again.");
+    if (!calendar || calendar.length !== 30) {
+      throw new Error("Failed to generate calendar plan. Please try again.");
     }
 
-    // Normalise fullScript — ensure it's always a string
-    plan.preview.forEach((p: { fullScript?: unknown }) => {
-      if (typeof p.fullScript === "object" && p.fullScript !== null) {
-        p.fullScript = Object.values(p.fullScript as Record<string, string>).join(" ");
-      }
-      if (typeof p.fullScript !== "string" || !p.fullScript.trim()) {
-        p.fullScript = "Script generation error — please regenerate.";
-      }
+    // Step 2: Generate Day 1-3 full scripts in parallel
+    // Each uses the EXACT same prompt structure as the main app's Reels generator
+    const [script1Raw, script2Raw, script3Raw] = await Promise.all([
+      generateReelScript(openai, calendar[0].topic, calendar[0].type, nicheClean),
+      generateReelScript(openai, calendar[1].topic, calendar[1].type, nicheClean),
+      generateReelScript(openai, calendar[2].topic, calendar[2].type, nicheClean),
+    ]);
+
+    // Extract hooks from the raw script outputs (## HOOK section)
+    function extractHookFromScript(raw: string): string {
+      const match = raw.match(/## HOOK\n([\s\S]*?)(?=\n## |\n===|$)/);
+      return match ? match[1].trim() : "";
+    }
+
+    const preview = [
+      { day: 1, type: calendar[0].type, topic: calendar[0].topic },
+      { day: 2, type: calendar[1].type, topic: calendar[1].topic },
+      { day: 3, type: calendar[2].type, topic: calendar[2].topic },
+    ].map((d, i) => {
+      const raw = [script1Raw, script2Raw, script3Raw][i];
+      const primaryHook = extractHookFromScript(raw);
+      const fullScript = parseScriptToString(raw);
+      return {
+        day: d.day,
+        type: d.type,
+        topic: d.topic,
+        primaryHook,
+        secondaryHooks: [] as string[],
+        fullScript,
+        caption: `${primaryHook} ${cta}`.trim(),
+      };
     });
 
-    return NextResponse.json(plan);
+    return NextResponse.json({ preview, calendar });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to generate plan.";
     return NextResponse.json({ error: message }, { status: 500 });
