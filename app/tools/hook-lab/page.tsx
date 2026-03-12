@@ -4,19 +4,19 @@ import { useState, useCallback, useEffect, FormEvent } from "react";
 import Link from "next/link";
 
 const VIDEO_TYPES = [
+  "General",
   "Educational",
   "Myth",
   "Comparison",
   "List",
   "Authority",
-  "Common mistake",
+  "Common Mistake",
   "Selling",
   "Story-Telling",
   "Tutorial/Step-by-Step",
-  "Other/General",
 ];
 
-const DAILY_LIMIT = 10;
+const DAILY_LIMIT = 5;
 const STORAGE_KEY = "hookLabUsage";
 
 function getToday() {
@@ -41,7 +41,6 @@ function saveUsage(count: number) {
 }
 
 export default function HookLabPage() {
-  const [niche, setNiche] = useState("");
   const [topic, setTopic] = useState("");
   const [videoType, setVideoType] = useState(VIDEO_TYPES[0]);
   const [hooks, setHooks] = useState<string[]>([]);
@@ -60,7 +59,7 @@ export default function HookLabPage() {
 
   const handleSubmit = useCallback(async (e: FormEvent) => {
     e.preventDefault();
-    if (!niche.trim() || !topic.trim() || limitReached) return;
+    if (!topic.trim() || limitReached) return;
 
     setLoading(true);
     setError("");
@@ -70,7 +69,7 @@ export default function HookLabPage() {
       const res = await fetch("/api/hook-lab", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ niche: niche.trim(), topic: topic.trim(), videoType }),
+        body: JSON.stringify({ topic: topic.trim(), videoType }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Generation failed.");
@@ -85,7 +84,7 @@ export default function HookLabPage() {
     } finally {
       setLoading(false);
     }
-  }, [niche, topic, videoType, usageCount, limitReached]);
+  }, [topic, videoType, usageCount, limitReached]);
 
   const copyHook = useCallback(async (text: string, idx: number) => {
     await navigator.clipboard.writeText(text);
@@ -113,7 +112,7 @@ export default function HookLabPage() {
           </Link>
           <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}>
             <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: limitReached ? "var(--red)" : "var(--green)" }} />
-            {limitReached ? "Daily limit reached" : `${remaining} / ${DAILY_LIMIT} left today`}
+            {limitReached ? "Daily limit reached" : `${remaining} / ${DAILY_LIMIT} free today`}
           </div>
         </div>
       </nav>
@@ -151,27 +150,13 @@ export default function HookLabPage() {
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>
-                  1. What is your niche?
-                </label>
-                <input
-                  type="text"
-                  value={niche}
-                  onChange={(e) => setNiche(e.target.value)}
-                  placeholder="e.g. Instagram Growth, Personal Finance, Fitness"
-                  required
-                  className="w-full rounded-xl px-4 py-3 text-sm"
-                  style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", outline: "none" }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>
-                  2. What is your Reel idea or topic?
+                  What is your Reel idea or topic?
                 </label>
                 <input
                   type="text"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  placeholder="e.g. How to get your first 1,000 followers"
+                  placeholder="e.g. How to get your first 1,000 Instagram followers"
                   required
                   className="w-full rounded-xl px-4 py-3 text-sm"
                   style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", outline: "none" }}
@@ -179,7 +164,7 @@ export default function HookLabPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>
-                  3. What type of video?
+                  Video type
                 </label>
                 <div className="relative">
                   <select
@@ -189,7 +174,7 @@ export default function HookLabPage() {
                     style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", outline: "none" }}
                   >
                     {VIDEO_TYPES.map((t) => (
-                      <option key={t} value={t}>{t}</option>
+                      <option key={t} value={t}>{t === "General" ? "General (any type)" : t}</option>
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center" style={{ color: "var(--muted)" }}>
@@ -206,7 +191,7 @@ export default function HookLabPage() {
 
               <button
                 type="submit"
-                disabled={loading || !niche.trim() || !topic.trim()}
+                disabled={loading || !topic.trim()}
                 className="w-full rounded-xl py-3.5 text-sm font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 style={{ background: "var(--accent)", color: "#fff", boxShadow: loading ? "none" : "0 0 28px var(--accent-glow)" }}
               >
@@ -226,7 +211,7 @@ export default function HookLabPage() {
             <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
               <div>
                 <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Your Hooks</span>
-                <span className="ml-2 text-xs" style={{ color: "var(--muted)" }}>— {videoType} · {niche}</span>
+                <span className="ml-2 text-xs" style={{ color: "var(--muted)" }}>— {videoType} · {topic}</span>
               </div>
               <button
                 onClick={copyAll}

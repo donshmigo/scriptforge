@@ -77,7 +77,9 @@ export default function EditProfileModal({
   onSave,
   onClose,
 }: EditProfileModalProps) {
+  // If the persona doesn't support "style" tab and it's somehow selected, fall back to identity
   const [tab, setTab] = useState<Tab>("identity");
+  const safeTab: Tab = tab === "style" && personaId !== "thomas" ? "identity" : tab;
 
   // Identity fields
   const [name, setName] = useState(profile.name);
@@ -330,7 +332,9 @@ export default function EditProfileModal({
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "identity",    label: "Who Am I" },
-    { id: "style",       label: "My Style" },
+    // "My Style" (script analysis) is only relevant for the Thomas persona —
+    // pre-built styles (Best Of, Product Review) have their own built-in style guides.
+    ...(personaId === "thomas" ? [{ id: "style" as Tab, label: "My Style" }] : []),
     { id: "introguide",  label: "Intro Guide" },
     { id: "scriptguide", label: "Script Guide" },
     { id: "apikey",      label: "API Keys" },
@@ -378,9 +382,9 @@ export default function EditProfileModal({
               onClick={() => setTab(t.id)}
               className="flex-1 py-3 text-xs font-medium transition-colors"
               style={{
-                color: tab === t.id ? "var(--foreground)" : "var(--muted)",
-                background: tab === t.id ? "var(--surface)" : "var(--surface-2)",
-                borderBottom: tab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
+                color: safeTab === t.id ? "var(--foreground)" : "var(--muted)",
+                background: safeTab === t.id ? "var(--surface)" : "var(--surface-2)",
+                borderBottom: safeTab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
               }}
             >
               {t.label}
@@ -390,7 +394,7 @@ export default function EditProfileModal({
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 px-6 py-6">
-          {tab === "identity" && (
+          {safeTab === "identity" && (
             <div className="flex flex-col gap-5">
               {/* Load from persona */}
               {(() => {
@@ -534,7 +538,7 @@ export default function EditProfileModal({
             </div>
           )}
 
-          {tab === "style" && (
+          {safeTab === "style" && (
             <div className="flex flex-col gap-5">
               {/* Current profile status */}
               {styleProfile && (
@@ -680,8 +684,8 @@ export default function EditProfileModal({
             </div>
           )}
 
-          {(tab === "introguide" || tab === "scriptguide") && (() => {
-            const isIntro = tab === "introguide";
+          {(safeTab === "introguide" || safeTab === "scriptguide") && (() => {
+            const isIntro = safeTab === "introguide";
             const guideText = isIntro ? introGuide : scriptGuide;
             const setGuide = isIntro ? setIntroGuide : setScriptGuide;
             const uploading = isIntro ? introGuideUploading : scriptGuideUploading;
@@ -764,7 +768,7 @@ export default function EditProfileModal({
             );
           })()}
 
-          {tab === "apikey" && (
+          {safeTab === "apikey" && (
             <div className="flex flex-col gap-6">
               {/* Anthropic key — used for script generation */}
               <div className="flex flex-col gap-3">

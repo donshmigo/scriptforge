@@ -3,8 +3,6 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 
-type Goal = "followers" | "sales";
-
 interface Script { [key: string]: string; }
 
 interface PlanDayPreview {
@@ -70,7 +68,6 @@ function TypeBadge({ type }: { type: string }) {
 
 export default function ContentFactoryPage() {
   const [niche, setNiche] = useState("");
-  const [goal, setGoal] = useState<Goal>("followers");
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<FullPlan | null>(null);
   const [error, setError] = useState("");
@@ -89,7 +86,7 @@ export default function ContentFactoryPage() {
       const res = await fetch("/api/content-factory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ niche: niche.trim(), goal }),
+        body: JSON.stringify({ niche: niche.trim() }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Generation failed.");
@@ -99,7 +96,7 @@ export default function ContentFactoryPage() {
     } finally {
       setLoading(false);
     }
-  }, [niche, goal]);
+  }, [niche]);
 
   const handleSelectDay = useCallback((day: PlanDayCalendar) => {
     const fullDay = plan?.preview.find((p) => p.day === day.day) ?? day;
@@ -197,9 +194,8 @@ export default function ContentFactoryPage() {
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl border p-6 md:p-8" style={{ background: "var(--surface)", borderColor: "var(--border)" }}>
               <form onSubmit={handleGenerate} className="flex flex-col gap-5">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>Niche</label>
+                <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>What&apos;s your niche?</label>
                     <input
                       type="text"
                       value={niche}
@@ -211,25 +207,6 @@ export default function ContentFactoryPage() {
                       style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", outline: "none" }}
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2" style={{ color: "var(--foreground)" }}>Primary Goal</label>
-                    <div className="relative">
-                      <select
-                        value={goal}
-                        onChange={(e) => setGoal(e.target.value as Goal)}
-                        disabled={loading}
-                        className="w-full rounded-xl px-4 py-3 text-sm appearance-none"
-                        style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", outline: "none" }}
-                      >
-                        <option value="followers">Grow Followers</option>
-                        <option value="sales">Generate Sales / Leads</option>
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center" style={{ color: "var(--muted)" }}>
-                        <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
                 {error && (
                   <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
@@ -272,7 +249,7 @@ export default function ContentFactoryPage() {
             <div className="text-center mb-10">
               <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--foreground)" }}>Your 30-Day Content Plan</h1>
               <p style={{ color: "var(--muted)" }}>
-                Niche: <span style={{ color: "var(--foreground)" }}>{niche}</span> · Goal: <span style={{ color: "var(--foreground)" }}>{goal === "followers" ? "Grow Followers" : "Generate Sales / Leads"}</span>
+                Niche: <span style={{ color: "var(--foreground)" }}>{niche}</span>
               </p>
             </div>
 

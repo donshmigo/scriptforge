@@ -126,7 +126,10 @@ export async function POST(req: NextRequest) {
     const persona = getWritingStyle(personaId);
 
     // ── INPUT 1: STYLE ────────────────────────────────────────────────────────
-    // Precedence: forensic analysis of real scripts > writing style's Style Guide
+    // For the Thomas persona, forensic style analysis + script samples override the built-in guide.
+    // For all other pre-built personas, those fields are irrelevant — use only the built-in guide.
+    const isThomas = personaId === "thomas";
+
     const styleSection = `════════════════════════════════════════
 INPUT 1 — STYLE GUIDE  [Writing Style: ${persona.name}]
 Language, tone, word choice, sentence structure. This governs ALL writing decisions.
@@ -134,21 +137,23 @@ Language, tone, word choice, sentence structure. This governs ALL writing decisi
 
 ${persona.styleGuide}
 
-${styleAnalysis?.trim() ? `---
+${isThomas && styleAnalysis?.trim() ? `---
 
 FORENSIC STYLE ANALYSIS (extracted from this creator's actual published scripts — apply on top of the Style Guide above):
 
 ${styleAnalysis}` : ""}
 
-${scriptSamples.length > 0 ? `---
+${isThomas && scriptSamples.length > 0 ? `---
 
 REAL SCRIPT EXAMPLES — pattern-match every sentence against these:
 
 ${scriptSamples.map((s, i) => `--- EXAMPLE ${i + 1}: "${s.name}" ---\n${s.sample}`).join("\n\n")}` : ""}`;
 
     // ── INPUT 2: IDENTITY ─────────────────────────────────────────────────────
-    // Precedence: creator profile fields > Thomas's Who Am I default
-    const identitySection = `════════════════════════════════════════
+    // Thomas persona: use Thomas's Who Am I as the default, with creator profile overriding.
+    // All other personas: use ONLY the creator profile. Never bleed Thomas's identity in.
+    const identitySection = isThomas
+      ? `════════════════════════════════════════
 INPUT 2 — WHO AM I
 All proof points, stories, audience, beliefs. Use ONLY figures and stories from here. Never invent.
 ════════════════════════════════════════
@@ -171,7 +176,33 @@ CONTRARIAN ANGLE (this belief shapes the video's positioning):
 ${creatorProfile.contraryBelief || "See core beliefs above."}
 
 TARGET AUDIENCE:
-${creatorProfile.targetPerson || "See target audience above."}` : ""}`;
+${creatorProfile.targetPerson || "See target audience above."}` : ""}`
+      : `════════════════════════════════════════
+INPUT 2 — WHO AM I
+All proof points, stories, audience, beliefs. Use ONLY the information documented below. Never invent.
+════════════════════════════════════════
+
+CREATOR PROFILE:
+
+NAME: ${creatorProfile?.name || "[Name not set — add in Fixed Inputs → Who Am I]"}
+
+CREDIBILITY STACK — use these exact proof points when establishing authority:
+${creatorProfile?.credibilityStack || "[Not set — add in Fixed Inputs → Who Am I]"}
+
+UNIQUE METHOD — when explaining HOW to achieve something, use this specific approach:
+${creatorProfile?.uniqueMethod || "[Not set — add in Fixed Inputs → Who Am I]"}
+
+CONTRARIAN ANGLE — this belief shapes the video's positioning:
+${creatorProfile?.contraryBelief || "[Not set — add in Fixed Inputs → Who Am I]"}
+
+TARGET AUDIENCE:
+${creatorProfile?.targetPerson || "[Not set — add in Fixed Inputs → Who Am I]"}
+
+ANTI-FABRICATION — CRITICAL:
+- Use ONLY the proof points, results, and stories documented above.
+- Never default to Thomas Graham's identity, credentials, follower counts, or life story.
+- Never invent outcomes, statistics, client results, or personal anecdotes not listed here.
+- If a specific figure is needed but not documented above, write [ADD DETAIL] — never guess.`;
 
     // ── INPUTS 3 & 4 / 5: GUIDES (platform-aware) ────────────────────────────
     // For Reels: Input 5 (Reels Guide) replaces Input 3 & 4 entirely.
