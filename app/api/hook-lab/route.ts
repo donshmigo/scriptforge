@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { HOOK_LIBRARY } from "@/lib/hook-library";
 
-// Map UI video type labels → exact section headers in HOOK_LIBRARY
 const CATEGORY_MAP: Record<string, string> = {
   "Educational":     "# Educational Hooks",
   "Comparison":      "# Comparison Hooks",
@@ -13,8 +12,7 @@ const CATEGORY_MAP: Record<string, string> = {
 };
 
 /**
- * Extract hooks from a specific section of the HOOK_LIBRARY string.
- * Returns every "- ..." line that belongs to that section.
+ * Extract every hook from a named section of the HOOK_LIBRARY.
  */
 function extractSection(header: string): string[] {
   const lines = HOOK_LIBRARY.split("\n");
@@ -23,31 +21,12 @@ function extractSection(header: string): string[] {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed === header) {
-      inSection = true;
-      continue;
-    }
-    // A new section header signals the end of the current section
-    if (inSection && trimmed.startsWith("# ")) {
-      break;
-    }
-    if (inSection && trimmed.startsWith("- ")) {
-      hooks.push(trimmed.slice(2).trim());
-    }
+    if (trimmed === header) { inSection = true; continue; }
+    if (inSection && trimmed.startsWith("# ")) break;
+    if (inSection && trimmed.startsWith("- ")) hooks.push(trimmed.slice(2).trim());
   }
 
   return hooks;
-}
-
-/** Pick `n` random items from an array without replacement */
-function sampleRandom<T>(arr: T[], n: number): T[] {
-  const copy = [...arr];
-  const result: T[] = [];
-  while (result.length < n && copy.length > 0) {
-    const idx = Math.floor(Math.random() * copy.length);
-    result.push(copy.splice(idx, 1)[0]);
-  }
-  return result;
 }
 
 export async function POST(req: NextRequest) {
@@ -65,41 +44,40 @@ export async function POST(req: NextRequest) {
 
     const isGeneral = !videoType || videoType === "General";
 
-    // ── Server-side category filtering ────────────────────────────────────────
-    // We extract hooks on the server so GPT CANNOT stray into other categories.
-    let selectedHooks: string[];
+    // Build the hook pool — ALL hooks from the relevant section(s)
+    let hookPool: string[];
 
     if (isGeneral) {
-      // Pull a diverse mix: up to 3 from each category, shuffle, take 20 as pool
-      const pool: string[] = [];
-      for (const header of Object.values(CATEGORY_MAP)) {
-        const section = extractSection(header);
-        pool.push(...sampleRandom(section, 3));
-      }
-      selectedHooks = sampleRandom(pool, 20);
+      // For General: include every hook from every category
+      hookPool = Object.values(CATEGORY_MAP).flatMap(extractSection);
     } else {
       const header = CATEGORY_MAP[videoType];
       if (!header) {
         return NextResponse.json({ error: `Unknown video type: ${videoType}` }, { status: 400 });
       }
-      const section = extractSection(header);
-      if (section.length === 0) {
-        return NextResponse.json({ error: `No hooks found for category: ${videoType}` }, { status: 500 });
+      hookPool = extractSection(header);
+      if (hookPool.length === 0) {
+        return NextResponse.json({ error: `No hooks found for: ${videoType}` }, { status: 500 });
       }
-      // Give GPT a pool of 20 random hooks from the correct section to choose from
-      selectedHooks = sampleRandom(section, Math.min(20, section.length));
     }
 
-    const hookPool = selectedHooks.map((h, i) => `${i + 1}. ${h}`).join("\n");
+    const numberedPool = hookPool.map((h, i) => `${i + 1}. ${h}`).join("\n");
 
-    const systemInstruction = `You are Hook Lab. Your ONLY job is to take the HOOK TEMPLATES below and customise them for the user's Reel topic.
+    const systemInstruction = `You are Hook Lab. Your job is to find the 10 most relevant hook templates from the list below for the user's Reel topic, then customise each one.
 
-RULES — READ CAREFULLY:
-1. You MUST use ONLY the hook templates provided in HOOK TEMPLATES. Do NOT invent new hooks.
-2. Choose the 10 best-fitting templates from the list. Skip any that are a genuinely poor fit for the topic.
-3. For each chosen template, replace ALL placeholders — e.g. (insert action), (insert result), (Insert noun), # — with specific, vivid, topic-relevant words. Every placeholder must be gone.
-4. Every finished hook must be written as SPOKEN WORDS ONLY. No brackets, no parentheses, no labels, no stage directions in the final output.
-5. Output ONLY a numbered list of exactly 10 hooks. No intro text, no section headers, no explanations.`;
+STEP 1 — SELECT:
+Read every template and pick the 10 that are the BEST FIT for the Reel topic. Consider:
+- Does the template's structure match what the topic is trying to communicate?
+- Would this hook make someone stop scrolling for THIS specific topic?
+- Prefer variety — don't pick 10 that all feel the same.
+
+STEP 2 — CUSTOMISE:
+For each selected template, replace EVERY placeholder — e.g. (insert action), (insert result), (Insert noun), # — with specific, vivid, topic-relevant words. No placeholder may remain.
+
+OUTPUT RULES:
+- Every hook must be written as SPOKEN WORDS ONLY. No brackets, no parentheses, no labels, no stage directions.
+- Do NOT invent hooks not based on the templates. Every output hook must be a customised version of a template from the list.
+- Output ONLY a numbered list of exactly 10 hooks. No intro, no explanations, no headers.`;
 
     const openai = new OpenAI({ apiKey });
 
@@ -109,10 +87,10 @@ RULES — READ CAREFULLY:
         { role: "system", content: systemInstruction },
         {
           role: "user",
-          content: `HOOK TEMPLATES:\n${hookPool}\n\nREEL TOPIC: "${topic.trim()}"\n\nCustomise 10 of these templates for the topic now.`,
+          content: `HOOK TEMPLATES:\n${numberedPool}\n\nREEL TOPIC: "${topic.trim()}"\n\nSelect the 10 best-fitting templates and customise them now.`,
         },
       ],
-      temperature: 0.85,
+      temperature: 0.7,
       max_tokens: 1200,
     });
 
