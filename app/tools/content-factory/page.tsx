@@ -11,7 +11,7 @@ interface PlanDayPreview {
   topic: string;
   primaryHook: string;
   secondaryHooks: string[];
-  fullScript: Script;
+  fullScript: string | Script;
   caption: string;
 }
 
@@ -115,7 +115,7 @@ export default function ContentFactoryPage() {
         escape(day.topic),
         escape(day.primaryHook),
         escape(day.secondaryHooks.join("; ")),
-        escape(JSON.stringify(day.fullScript)),
+        escape(typeof day.fullScript === "string" ? day.fullScript : JSON.stringify(day.fullScript)),
         escape(day.caption),
       ].join(","));
     });
@@ -435,16 +435,22 @@ export default function ContentFactoryPage() {
                   )}
 
                   {/* Full Script */}
-                  {selectedDay.fullScript && Object.keys(selectedDay.fullScript).length > 0 && (
+                  {selectedDay.fullScript && (
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "var(--muted)" }}>Full Script</p>
-                      <div className="rounded-xl p-4 flex flex-col gap-4" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                        {Object.entries(selectedDay.fullScript).map(([key, val]) => (
-                          <div key={key}>
-                            <p className="text-xs font-bold mb-1 capitalize" style={{ color: "var(--accent)" }}>{key.replace(/([A-Z])/g, " $1").trim()}</p>
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--foreground)" }}>{String(val)}</p>
+                      <div className="rounded-xl p-4" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                        {typeof selectedDay.fullScript === "string" ? (
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--foreground)" }}>{selectedDay.fullScript}</p>
+                        ) : (
+                          <div className="flex flex-col gap-4">
+                            {Object.entries(selectedDay.fullScript).map(([key, val]) => (
+                              <div key={key}>
+                                <p className="text-xs font-bold mb-1 capitalize" style={{ color: "var(--accent)" }}>{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "var(--foreground)" }}>{String(val)}</p>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
                   )}
