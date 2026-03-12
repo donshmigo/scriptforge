@@ -259,6 +259,18 @@ export default function EditProfileModal({
     if (id.contentStyle)      setContentStyle(id.contentStyle);
   }, [personaId]);
 
+  const loadThomasIdentity = useCallback(() => {
+    const thomas = getWritingStyle("thomas");
+    const id = thomas.identity;
+    if (id.name)              setName(id.name);
+    if (id.channelUrl)        setChannelUrl(id.channelUrl);
+    if (id.credibilityStack)  setCredibilityStack(id.credibilityStack);
+    if (id.uniqueMethod)      setUniqueMethod(id.uniqueMethod);
+    if (id.contraryBelief)    setContraryBelief(id.contraryBelief);
+    if (id.targetPerson)      setTargetPerson(id.targetPerson);
+    if (id.contentStyle)      setContentStyle(id.contentStyle);
+  }, []);
+
   const handleScrapeChannel = useCallback(async () => {
     if (!channelUrl.trim()) return;
     setScrapeLoading(true);
@@ -396,31 +408,25 @@ export default function EditProfileModal({
         <div className="overflow-y-auto flex-1 px-6 py-6">
           {safeTab === "identity" && (
             <div className="flex flex-col gap-5">
-              {/* Load from persona */}
-              {(() => {
-                const style = getWritingStyle(personaId);
-                if (!style.identity.name) return null;
-                return (
-                  <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                    <div>
-                      <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
-                        Load {style.name}&apos;s identity
-                      </p>
-                      <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                        Pre-fill all fields from the {style.name} writing style document
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={loadIdentityFromPersona}
-                      className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0"
-                      style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
-                    >
-                      Load →
-                    </button>
-                  </div>
-                );
-              })()}
+              {/* Load Thomas Graham's identity — available for all writing styles */}
+              <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
+                    Load Thomas Graham&apos;s identity
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                    Pre-fill all fields from the Thomas Graham writing style document
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadThomasIdentity}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0"
+                  style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                >
+                  Load →
+                </button>
+              </div>
 
               <Field label="Name or handle">
                 <input
