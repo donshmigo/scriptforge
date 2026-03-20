@@ -927,8 +927,8 @@ ${bodyHtml}
                 },
                 {
                   label: "Who Am I",
-                  value: creatorProfile.name || "Not configured",
-                  ok: !!creatorProfile.name,
+                  value: creatorProfile?.name || "Not configured",
+                  ok: !!creatorProfile?.name,
                 },
                 {
                   label: "Intro Guide",
