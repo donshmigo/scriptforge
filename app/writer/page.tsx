@@ -4,9 +4,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import Onboarding from "@/components/Onboarding";
 import EditProfileModal from "@/components/EditProfileModal";
-import type { CreatorProfile, StyleProfile } from "@/lib/types";
-import { THOMAS_INTRO_GUIDE, THOMAS_SCRIPT_GUIDE } from "@/lib/thomas-guides";
+import type { CreatorProfile, StyleProfile, PersonaProfile, WhoAmI } from "@/lib/types";
 import { WRITING_STYLES, DEFAULT_STYLE_ID, getWritingStyle } from "@/lib/personas";
+import { createClient } from "@/lib/supabase/client";
+import { getAllPersonaProfiles, upsertPersonaProfile } from "@/lib/supabase/profiles";
 
 type ScriptLength = "1" | "2" | "3" | "4" | "5";
 type Platform = "youtube" | "reels";
@@ -37,13 +38,36 @@ const REELS_LENGTHS: Record<ScriptLength, { label: string; sub: string }> = {
   "5": { label: "60–90 sec",  sub: "~190 words" },
 };
 
-const LS_PROFILE      = "yt_creator_profile";
-const LS_STYLE        = "yt_style_profile";
+// API keys stay device-local; all profile data moves to Supabase
 const LS_KEY          = "yt_api_key";
 const LS_ANT_KEY      = "yt_anthropic_key";
-const LS_INTRO_GUIDE  = "yt_intro_guide";
-const LS_SCRIPT_GUIDE = "yt_script_guide";
-const LS_WRITING_STYLE = "yt_persona_id"; // localStorage key kept for backwards compat
+const LS_WRITING_STYLE = "yt_persona_id";
+
+function whoAmIToCreatorProfile(w: WhoAmI): CreatorProfile {
+  return {
+    path: "experienced",
+    name: w.name,
+    channelUrl: w.channelUrl,
+    credibilityStack: w.credibilityStack,
+    uniqueMethod: w.uniqueMethod,
+    contraryBelief: w.contraryBelief,
+    targetPerson: w.targetPerson,
+    contentStyle: w.contentStyle,
+    completedAt: Date.now(),
+  };
+}
+
+function creatorProfileToWhoAmI(p: CreatorProfile): WhoAmI {
+  return {
+    name: p.name,
+    channelUrl: p.channelUrl,
+    credibilityStack: p.credibilityStack,
+    uniqueMethod: p.uniqueMethod,
+    contraryBelief: p.contraryBelief,
+    targetPerson: p.targetPerson,
+    contentStyle: p.contentStyle,
+  };
+}
 
 function countWords(text: string): number {
   return text.replace(/#{1,6}\s+/g, "").trim().split(/\s+/).filter(Boolean).length;
@@ -144,6 +168,8 @@ function renderScript(raw: string): React.ReactNode[] {
 
 export default function Home() {
   const [ready, setReady] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [allProfiles, setAllProfiles] = useState<Record<string, PersonaProfile>>({});
   const [creatorProfile, setCreatorProfile] = useState<CreatorProfile | null>(null);
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(null);
   const [apiKey, setApiKey] = useState("");
@@ -179,37 +205,72 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const outputRef = useRef<HTMLDivElement>(null);
 
-  // Load persisted data
+  // Load persisted data from Supabase + localStorage (API keys only)
   useEffect(() => {
-    const rawProfile = localStorage.getItem(LS_PROFILE);
-    const rawStyle   = localStorage.getItem(LS_STYLE);
-    const rawKey     = localStorage.getItem(LS_KEY);
-    const rawAntKey  = localStorage.getItem(LS_ANT_KEY);
-    const rawIntro   = localStorage.getItem(LS_INTRO_GUIDE);
-    const rawScript  = localStorage.getItem(LS_SCRIPT_GUIDE);
-    if (rawProfile) { try { setCreatorProfile(JSON.parse(rawProfile)); } catch { /* ignore */ } }
-    if (rawStyle)   { try { setStyleProfile(JSON.parse(rawStyle)); }   catch { /* ignore */ } }
-    if (rawKey)     setApiKey(rawKey);
-    if (rawAntKey)  setAnthropicApiKey(rawAntKey);
-    // Seed with Thomas's guides as defaults if user hasn't uploaded custom ones
+    const rawKey    = localStorage.getItem(LS_KEY);
+    const rawAntKey = localStorage.getItem(LS_ANT_KEY);
+    if (rawKey)    setApiKey(rawKey);
+    if (rawAntKey) setAnthropicApiKey(rawAntKey);
+
     const rawPersona = localStorage.getItem(LS_WRITING_STYLE);
     const pid = rawPersona ?? DEFAULT_STYLE_ID;
     setPersonaId(pid);
-    const persona = getWritingStyle(pid);
-    if (rawIntro)   setIntroGuide(rawIntro);
-    else            setIntroGuide(persona.introGuide);
-    if (rawScript)  setScriptGuide(rawScript);
-    else            setScriptGuide(persona.scriptGuide);
-    setReady(true);
+
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { setReady(true); return; }
+      setUserId(user.id);
+      getAllPersonaProfiles(supabase, user.id).then((profiles) => {
+        setAllProfiles(profiles);
+        setReady(true);
+      });
+    });
   }, []);
 
+  // Derive current profile state whenever personaId or allProfiles changes
+  useEffect(() => {
+    const profile = allProfiles[personaId];
+    const writingStyle = getWritingStyle(personaId);
+    if (profile) {
+      setCreatorProfile(whoAmIToCreatorProfile(profile.whoAmI));
+      setStyleProfile(profile.styleProfile);
+      setIntroGuide(profile.introGuide || writingStyle.introGuide);
+      setScriptGuide(profile.scriptGuide || writingStyle.scriptGuide);
+    } else {
+      setCreatorProfile(null);
+      setStyleProfile(null);
+      setIntroGuide(writingStyle.introGuide);
+      setScriptGuide(writingStyle.scriptGuide);
+    }
+  }, [personaId, allProfiles]);
+
+  // Update local state + Supabase for the current persona
   const persistAll = useCallback(
     (profile: CreatorProfile, style: StyleProfile | null, key?: string, antKey?: string, iGuide?: string, sGuide?: string) => {
+      const updatedProfile: Partial<PersonaProfile> = {};
+      updatedProfile.whoAmI = creatorProfileToWhoAmI(profile);
+      updatedProfile.styleProfile = style;
+      if (iGuide !== undefined) updatedProfile.introGuide = iGuide;
+      if (sGuide !== undefined) updatedProfile.scriptGuide = sGuide;
+
+      // Update local state
       setCreatorProfile(profile);
       setStyleProfile(style);
-      localStorage.setItem(LS_PROFILE, JSON.stringify(profile));
-      if (style) localStorage.setItem(LS_STYLE, JSON.stringify(style));
-      else localStorage.removeItem(LS_STYLE);
+      if (iGuide !== undefined) setIntroGuide(iGuide);
+      if (sGuide !== undefined) setScriptGuide(sGuide);
+
+      // Update allProfiles cache
+      setAllProfiles((prev) => ({
+        ...prev,
+        [personaId]: {
+          whoAmI: updatedProfile.whoAmI!,
+          styleProfile: style,
+          introGuide: iGuide ?? prev[personaId]?.introGuide ?? "",
+          scriptGuide: sGuide ?? prev[personaId]?.scriptGuide ?? "",
+        },
+      }));
+
+      // Save API keys locally
       if (key !== undefined) {
         setApiKey(key);
         if (key) localStorage.setItem(LS_KEY, key);
@@ -220,46 +281,48 @@ export default function Home() {
         if (antKey) localStorage.setItem(LS_ANT_KEY, antKey);
         else localStorage.removeItem(LS_ANT_KEY);
       }
-      if (iGuide !== undefined) {
-        setIntroGuide(iGuide);
-        if (iGuide) localStorage.setItem(LS_INTRO_GUIDE, iGuide);
-        else localStorage.removeItem(LS_INTRO_GUIDE);
-      }
-      if (sGuide !== undefined) {
-        setScriptGuide(sGuide);
-        if (sGuide) localStorage.setItem(LS_SCRIPT_GUIDE, sGuide);
-        else localStorage.removeItem(LS_SCRIPT_GUIDE);
+
+      // Save profile data to Supabase
+      if (userId) {
+        const supabase = createClient();
+        upsertPersonaProfile(supabase, userId, personaId, updatedProfile);
       }
     },
-    []
+    [personaId, userId]
   );
 
   const handlePersonaChange = useCallback((pid: string) => {
-    const style = getWritingStyle(pid);
     setPersonaId(pid);
     localStorage.setItem(LS_WRITING_STYLE, pid);
-    // Only switch guides if user hasn't uploaded custom ones
-    const hasCustomIntro  = !!localStorage.getItem(LS_INTRO_GUIDE);
-    const hasCustomScript = !!localStorage.getItem(LS_SCRIPT_GUIDE);
-    if (!hasCustomIntro)  setIntroGuide(style.introGuide);
-    if (!hasCustomScript) setScriptGuide(style.scriptGuide);
+    // Derived state useEffect handles loading the new persona's data
   }, []);
 
   const handleOnboardingComplete = useCallback(
     (profile: CreatorProfile, style: StyleProfile | null, styleId?: string) => {
-      persistAll(profile, style);
-      // If a pre-made writing style was selected in onboarding, apply it immediately
-      if (styleId) {
-        const writingStyle = getWritingStyle(styleId);
-        setPersonaId(styleId);
-        localStorage.setItem(LS_WRITING_STYLE, styleId);
-        const hasCustomIntro  = !!localStorage.getItem(LS_INTRO_GUIDE);
-        const hasCustomScript = !!localStorage.getItem(LS_SCRIPT_GUIDE);
-        if (!hasCustomIntro)  setIntroGuide(writingStyle.introGuide);
-        if (!hasCustomScript) setScriptGuide(writingStyle.scriptGuide);
+      const targetPersonaId = styleId ?? personaId;
+      const writingStyle = getWritingStyle(targetPersonaId);
+      const whoAmI = creatorProfileToWhoAmI(profile);
+      const newPersonaProfile: PersonaProfile = {
+        whoAmI,
+        styleProfile: style,
+        introGuide: writingStyle.introGuide,
+        scriptGuide: writingStyle.scriptGuide,
+      };
+
+      // Update persona selection
+      setPersonaId(targetPersonaId);
+      localStorage.setItem(LS_WRITING_STYLE, targetPersonaId);
+
+      // Update allProfiles cache
+      setAllProfiles((prev) => ({ ...prev, [targetPersonaId]: newPersonaProfile }));
+
+      // Save to Supabase
+      if (userId) {
+        const supabase = createClient();
+        upsertPersonaProfile(supabase, userId, targetPersonaId, newPersonaProfile);
       }
     },
-    [persistAll]
+    [personaId, userId]
   );
 
   // Upload reference file for per-video use
@@ -566,7 +629,16 @@ ${bodyHtml}
   const wordCount = script ? countWords(script) : 0;
 
   if (!ready) return null;
-  if (!creatorProfile) return <Onboarding onComplete={handleOnboardingComplete} />;
+  // Show onboarding when user has no profiles at all (new sign-up)
+  if (Object.keys(allProfiles).length === 0) {
+    return (
+      <Onboarding
+        userId={userId ?? ""}
+        personaId={personaId}
+        onComplete={handleOnboardingComplete}
+      />
+    );
+  }
 
   const fixedGuideCount = [introGuide, scriptGuide].filter(Boolean).length;
 
@@ -574,13 +646,18 @@ ${bodyHtml}
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
       {showEditProfile && (
         <EditProfileModal
-          profile={creatorProfile}
+          profile={creatorProfile ?? {
+            path: "experienced", name: "", channelUrl: "", credibilityStack: "",
+            uniqueMethod: "", contraryBelief: "", targetPerson: "", contentStyle: "talking-head",
+            completedAt: Date.now(),
+          }}
           styleProfile={styleProfile}
           apiKey={apiKey}
           anthropicApiKey={anthropicApiKey}
           introGuide={introGuide}
           scriptGuide={scriptGuide}
           personaId={personaId}
+          userId={userId ?? ""}
           onSave={(p, s, k, antK, iG, sG) => { persistAll(p, s, k, antK, iG, sG); setShowEditProfile(false); }}
           onClose={() => setShowEditProfile(false)}
         />

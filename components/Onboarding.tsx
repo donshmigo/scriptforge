@@ -3,9 +3,13 @@
 import { useState, useRef, useCallback } from "react";
 import { type SampleScript } from "@/lib/scripts";
 import type { CreatorProfile, StyleProfile, ContentStyle } from "@/lib/types";
-import { WRITING_STYLES, type WritingStyle } from "@/lib/personas";
+import { WRITING_STYLES, getWritingStyle, type WritingStyle } from "@/lib/personas";
+import { createClient } from "@/lib/supabase/client";
+import { upsertPersonaProfile } from "@/lib/supabase/profiles";
 
 interface OnboardingProps {
+  userId?: string;
+  personaId?: string;
   onComplete: (
     profile: CreatorProfile,
     styleProfile: StyleProfile | null,
@@ -124,7 +128,7 @@ function StyledTextarea({
   );
 }
 
-export default function Onboarding({ onComplete }: OnboardingProps) {
+export default function Onboarding({ onComplete, userId = "", personaId: defaultPersonaId = "thomas" }: OnboardingProps) {
   const [path, setPath] = useState<Path>(null);
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
@@ -181,15 +185,14 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   // ── Step 0 Continue ──────────────────────────────────────────────────────────
   // Pre-made style → save style ID + complete immediately (no setup required).
   // Custom → launch the experienced setup flow (channel scrape + identity + style DNA).
-  const handleStep0Continue = useCallback(() => {
+  const handleStep0Continue = useCallback(async () => {
     if (isCustomSelected) {
       selectPath("experienced");
       return;
     }
     if (!selectedPersona) return;
-    // Complete onboarding with a blank profile — user can fill in via Edit Profile.
-    // Pass the styleId so page.tsx can update React state immediately.
-    onComplete({
+
+    const blankProfile: CreatorProfile = {
       path: "experienced",
       name: "",
       channelUrl: "",
@@ -199,9 +202,23 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
       targetPerson: "",
       contentStyle: "talking-head",
       completedAt: Date.now(),
-    }, null, selectedPersona.id);
+    };
+
+    // Save an empty profile row to Supabase so the writer page shows content
+    if (userId) {
+      const writingStyle = getWritingStyle(selectedPersona.id);
+      const supabase = createClient();
+      await upsertPersonaProfile(supabase, userId, selectedPersona.id, {
+        whoAmI: { name: "", channelUrl: "", credibilityStack: "", uniqueMethod: "", contraryBelief: "", targetPerson: "", contentStyle: "talking-head" },
+        styleProfile: null,
+        introGuide: writingStyle.introGuide,
+        scriptGuide: writingStyle.scriptGuide,
+      });
+    }
+
+    onComplete(blankProfile, null, selectedPersona.id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCustomSelected, selectedPersona, onComplete]);
+  }, [isCustomSelected, selectedPersona, onComplete, userId]);
 
   // ── Channel scrape (experienced step 1 → 2) ─────────────────────────────────
   const handleScrapeAndAdvance = useCallback(async () => {
@@ -360,22 +377,46 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   }, [pendingScripts, styleProfile, next]);
 
   // ── handleComplete ────────────────────────────────────────────────────────────
-  const handleComplete = useCallback(() => {
+  const handleComplete = useCallback(async () => {
+    const credStack = path === "new"
+      ? `Topic: ${form.topic}\nBackground: ${form.background}\nProof: ${form.proof}`
+      : form.credibilityStack;
+
     const profile: CreatorProfile = {
       path: path as "experienced" | "new",
       name: form.name,
       channelUrl: form.channelUrl,
-      credibilityStack: path === "new"
-        ? `Topic: ${form.topic}\nBackground: ${form.background}\nProof: ${form.proof}`
-        : form.credibilityStack,
+      credibilityStack: credStack,
       uniqueMethod: form.uniqueMethod,
       contraryBelief: form.contraryBelief,
       targetPerson: form.targetPerson,
       contentStyle: form.contentStyle,
       completedAt: Date.now(),
     };
-    onComplete(profile, styleProfile);
-  }, [path, form, styleProfile, onComplete]);
+
+    // Save to Supabase for the selected persona (custom setup defaults to thomas)
+    const targetPersonaId = selectedPersona?.id ?? defaultPersonaId;
+    if (userId) {
+      const writingStyle = getWritingStyle(targetPersonaId);
+      const supabase = createClient();
+      await upsertPersonaProfile(supabase, userId, targetPersonaId, {
+        whoAmI: {
+          name: profile.name,
+          channelUrl: profile.channelUrl,
+          credibilityStack: credStack,
+          uniqueMethod: profile.uniqueMethod,
+          contraryBelief: profile.contraryBelief,
+          targetPerson: profile.targetPerson,
+          contentStyle: profile.contentStyle,
+        },
+        styleProfile,
+        introGuide: writingStyle.introGuide,
+        scriptGuide: writingStyle.scriptGuide,
+      });
+    }
+
+    onComplete(profile, styleProfile, targetPersonaId);
+  }, [path, form, styleProfile, onComplete, userId, selectedPersona, defaultPersonaId]);
 
   // ── Step renderers ───────────────────────────────────────────────────────────
 
@@ -473,7 +514,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
       {/* Continue */}
       <button
-        onClick={handleStep0Continue}
+        onClick={() => { void handleStep0Continue(); }}
         disabled={!selectedPersona && !isCustomSelected}
         className="w-full rounded-xl py-3.5 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
         style={{ background: "var(--accent)", color: "#fff", boxShadow: (!selectedPersona && !isCustomSelected) ? "none" : "0 0 24px var(--accent-glow)" }}
@@ -978,7 +1019,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           </div>
         ))}
       </div>
-      <button onClick={handleComplete} className="px-8 py-3.5 rounded-xl text-sm font-semibold" style={{ background: "var(--accent)", color: "#fff", boxShadow: "0 0 28px var(--accent-glow)" }}>
+      <button onClick={() => { void handleComplete(); }} className="px-8 py-3.5 rounded-xl text-sm font-semibold" style={{ background: "var(--accent)", color: "#fff", boxShadow: "0 0 28px var(--accent-glow)" }}>
         Start Writing →
       </button>
     </div>

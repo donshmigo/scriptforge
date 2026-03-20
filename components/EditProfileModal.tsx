@@ -4,6 +4,8 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { type SampleScript } from "@/lib/scripts";
 import type { CreatorProfile, StyleProfile } from "@/lib/types";
 import { getWritingStyle } from "@/lib/personas";
+import { createClient } from "@/lib/supabase/client";
+import { upsertPersonaProfile } from "@/lib/supabase/profiles";
 
 interface EditProfileModalProps {
   profile: CreatorProfile;
@@ -13,6 +15,7 @@ interface EditProfileModalProps {
   introGuide?: string;
   scriptGuide?: string;
   personaId?: string;
+  userId?: string;
   onSave: (profile: CreatorProfile, styleProfile: StyleProfile | null, apiKey: string, anthropicApiKey: string, introGuide: string, scriptGuide: string) => void;
   onClose: () => void;
 }
@@ -74,10 +77,10 @@ export default function EditProfileModal({
   introGuide: initialIntroGuide = "",
   scriptGuide: initialScriptGuide = "",
   personaId = "thomas",
+  userId = "",
   onSave,
   onClose,
 }: EditProfileModalProps) {
-  // If the persona doesn't support "style" tab and it's somehow selected, fall back to identity
   const [tab, setTab] = useState<Tab>("identity");
   const safeTab: Tab = tab === "style" && personaId !== "thomas" ? "identity" : tab;
 
@@ -120,6 +123,17 @@ export default function EditProfileModal({
   const [scriptGuideUploading, setScriptGuideUploading] = useState(false);
   const introGuideFileRef = useRef<HTMLInputElement>(null);
   const scriptGuideFileRef = useRef<HTMLInputElement>(null);
+
+  // AI feedback state (per guide + identity)
+  const [introFeedback, setIntroFeedback] = useState("");
+  const [scriptFeedback, setScriptFeedback] = useState("");
+  const [identityFeedback, setIdentityFeedback] = useState("");
+  const [introAiLoading, setIntroAiLoading] = useState(false);
+  const [scriptAiLoading, setScriptAiLoading] = useState(false);
+  const [identityAiLoading, setIdentityAiLoading] = useState(false);
+  const [introAiError, setIntroAiError] = useState("");
+  const [scriptAiError, setScriptAiError] = useState("");
+  const [identityAiError, setIdentityAiError] = useState("");
 
   const [saved, setSaved] = useState(false);
 
@@ -325,7 +339,36 @@ export default function EditProfileModal({
     }
   }, []);
 
-  const handleSave = () => {
+  const handleAiUpdate = useCallback(async (
+    guideType: "introGuide" | "scriptGuide" | "whoAmI",
+    currentContent: unknown,
+    feedback: string,
+    setLoading: (v: boolean) => void,
+    setError: (v: string) => void,
+    onSuccess: (updated: unknown) => void,
+    clearFeedback: () => void,
+  ) => {
+    if (!feedback.trim()) return;
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/update-guide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guideType, currentContent, feedback, personaId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Update failed.");
+      onSuccess(data.updatedContent);
+      clearFeedback();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "AI update failed.");
+    } finally {
+      setLoading(false);
+    }
+  }, [personaId]);
+
+  const handleSave = async () => {
     const updatedProfile: CreatorProfile = {
       ...profile,
       name,
@@ -337,6 +380,18 @@ export default function EditProfileModal({
       contentStyle,
       completedAt: profile.completedAt,
     };
+
+    // Save to Supabase if userId is present
+    if (userId) {
+      const supabase = createClient();
+      await upsertPersonaProfile(supabase, userId, personaId, {
+        whoAmI: { name, channelUrl, credibilityStack, uniqueMethod, contraryBelief, targetPerson, contentStyle },
+        styleProfile,
+        introGuide,
+        scriptGuide,
+      });
+    }
+
     onSave(updatedProfile, styleProfile, apiKey, anthropicApiKey, introGuide, scriptGuide);
     setSaved(true);
     setTimeout(() => { setSaved(false); onClose(); }, 800);
@@ -408,25 +463,27 @@ export default function EditProfileModal({
         <div className="overflow-y-auto flex-1 px-6 py-6">
           {safeTab === "identity" && (
             <div className="flex flex-col gap-5">
-              {/* Load Thomas Graham's identity — available for all writing styles */}
-              <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                <div>
-                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
-                    Load Thomas Graham&apos;s identity
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                    Pre-fill all fields from the Thomas Graham writing style document
-                  </p>
+              {/* Load Thomas Graham's identity — only shown for the Thomas persona */}
+              {personaId === "thomas" && (
+                <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
+                      Load Thomas Graham&apos;s identity
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                      Pre-fill all fields from the Thomas Graham writing style document
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadThomasIdentity}
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0"
+                    style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                  >
+                    Load →
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={loadThomasIdentity}
-                  className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0"
-                  style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
-                >
-                  Load →
-                </button>
-              </div>
+              )}
 
               <Field label="Name or handle">
                 <input
@@ -541,6 +598,55 @@ export default function EditProfileModal({
                   })}
                 </div>
               </Field>
+
+              {/* AI feedback panel */}
+              <div className="rounded-xl p-4 flex flex-col gap-3 mt-1" style={{ background: "rgba(124,92,252,0.05)", border: "1px solid rgba(124,92,252,0.2)" }}>
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--accent)" }}>Refine with AI</p>
+                <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>
+                  Describe what to change and the AI will update your identity fields automatically.
+                </p>
+                <textarea
+                  value={identityFeedback}
+                  onChange={(e) => { setIdentityFeedback(e.target.value); setIdentityAiError(""); }}
+                  placeholder={`e.g. "Update my credibility stack — I've now helped 600 clients and hit $3M revenue" or "Change my target person to solo founders aged 28–45"`}
+                  rows={3}
+                  className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
+                  style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                />
+                {identityAiError && (
+                  <p className="text-xs" style={{ color: "var(--red)" }}>{identityAiError}</p>
+                )}
+                <button
+                  type="button"
+                  disabled={identityAiLoading || !identityFeedback.trim()}
+                  onClick={() => handleAiUpdate(
+                    "whoAmI",
+                    { name, channelUrl, credibilityStack, uniqueMethod, contraryBelief, targetPerson, contentStyle },
+                    identityFeedback,
+                    setIdentityAiLoading,
+                    setIdentityAiError,
+                    (updated) => {
+                      const u = updated as Record<string, string>;
+                      if (u.name !== undefined) setName(u.name);
+                      if (u.channelUrl !== undefined) setChannelUrl(u.channelUrl);
+                      if (u.credibilityStack !== undefined) setCredibilityStack(u.credibilityStack);
+                      if (u.uniqueMethod !== undefined) setUniqueMethod(u.uniqueMethod);
+                      if (u.contraryBelief !== undefined) setContraryBelief(u.contraryBelief);
+                      if (u.targetPerson !== undefined) setTargetPerson(u.targetPerson);
+                      if (u.contentStyle !== undefined) setContentStyle(u.contentStyle);
+                    },
+                    () => setIdentityFeedback(""),
+                  )}
+                  className="w-full rounded-lg py-2.5 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ background: "var(--accent)", color: "#fff" }}
+                >
+                  {identityAiLoading
+                    ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />Updating…</>
+                    : "✦ Update with AI"}
+                </button>
+              </div>
             </div>
           )}
 
@@ -763,6 +869,53 @@ export default function EditProfileModal({
                     <strong style={{ color: "var(--accent)" }}>Using default framework.</strong> Upload <code style={{ background: "var(--surface)", padding: "0 3px", borderRadius: 3 }}>{docName}</code> to override with your custom guide.
                   </div>
                 )}
+
+                {/* AI feedback panel */}
+                <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(124,92,252,0.05)", border: "1px solid rgba(124,92,252,0.2)" }}>
+                  <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--accent)" }}>Refine with AI</p>
+                  <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>
+                    Describe what to change and the AI will update the guide document automatically.
+                  </p>
+                  <textarea
+                    value={isIntro ? introFeedback : scriptFeedback}
+                    onChange={(e) => {
+                      if (isIntro) { setIntroFeedback(e.target.value); setIntroAiError(""); }
+                      else { setScriptFeedback(e.target.value); setScriptAiError(""); }
+                    }}
+                    placeholder={isIntro
+                      ? `e.g. "Add a rule: never start the intro with a question" or "Remove section 3 and replace it with a 2-beat proof stack"`
+                      : `e.g. "Add a rule about always using a bridge sentence before each section" or "Update the CTA instructions to mention a free guide first"`}
+                    rows={3}
+                    className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
+                    style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                  />
+                  {(isIntro ? introAiError : scriptAiError) && (
+                    <p className="text-xs" style={{ color: "var(--red)" }}>
+                      {isIntro ? introAiError : scriptAiError}
+                    </p>
+                  )}
+                  <button
+                    type="button"
+                    disabled={(isIntro ? introAiLoading : scriptAiLoading) || !(isIntro ? introFeedback : scriptFeedback).trim()}
+                    onClick={() => handleAiUpdate(
+                      isIntro ? "introGuide" : "scriptGuide",
+                      guideText,
+                      isIntro ? introFeedback : scriptFeedback,
+                      isIntro ? setIntroAiLoading : setScriptAiLoading,
+                      isIntro ? setIntroAiError : setScriptAiError,
+                      (updated) => setGuide(updated as string),
+                      () => isIntro ? setIntroFeedback("") : setScriptFeedback(""),
+                    )}
+                    className="w-full rounded-lg py-2.5 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{ background: "var(--accent)", color: "#fff" }}
+                  >
+                    {(isIntro ? introAiLoading : scriptAiLoading)
+                      ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />Updating guide…</>
+                      : "✦ Update with AI"}
+                  </button>
+                </div>
               </div>
             );
           })()}
@@ -854,7 +1007,7 @@ export default function EditProfileModal({
             Cancel
           </button>
           <button
-            onClick={handleSave}
+            onClick={() => { void handleSave(); }}
             className="text-sm font-semibold px-6 py-2 rounded-lg transition-all flex items-center gap-2"
             style={{ background: saved ? "rgba(92,252,160,0.15)" : "var(--accent)", color: saved ? "var(--green)" : "#fff", border: saved ? "1px solid rgba(92,252,160,0.3)" : "none" }}
           >

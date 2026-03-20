@@ -28,3 +28,22 @@ export type ContentStyle =
   | "educational-breakdown"
   | "story-driven"
   | "fast-lists";
+
+// Per-persona identity fields (stored in Supabase, isolated per persona)
+export interface WhoAmI {
+  name: string;
+  channelUrl: string;
+  credibilityStack: string;
+  uniqueMethod: string;
+  contraryBelief: string;
+  targetPerson: string;
+  contentStyle: string;
+}
+
+// Full per-persona profile stored in user_persona_profiles table
+export interface PersonaProfile {
+  whoAmI: WhoAmI;
+  styleProfile: StyleProfile | null;
+  introGuide: string;
+  scriptGuide: string;
+}
