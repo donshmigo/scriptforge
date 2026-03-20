@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Innertube } from "youtubei.js";
 
 export interface TranscriptResult {
   id: string;
@@ -13,14 +12,56 @@ export interface FetchTranscriptsResponse {
   failed: string[];
 }
 
-function segmentsToText(segments: { offsetMs: number; text: string }[]): string {
-  if (segments.length === 0) return "";
+// YouTube's Android InnerTube client — bypasses bot detection on the player endpoint
+const ANDROID_UA = "com.google.android.youtube/20.10.38 (Linux; U; Android 14)";
+const INNERTUBE_PLAYER_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
+const INNERTUBE_CONTEXT = {
+  client: { clientName: "ANDROID", clientVersion: "20.10.38" },
+};
+
+function decodeEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
+}
+
+function parseTimedTextXml(xml: string): { offsetMs: number; text: string }[] {
+  const lines: { offsetMs: number; text: string }[] = [];
+  const pRegex = /<p\s+t="(\d+)"\s+d="(\d+)"[^>]*>([\s\S]*?)<\/p>/g;
+  let m: RegExpExecArray | null;
+
+  while ((m = pRegex.exec(xml)) !== null) {
+    const offsetMs = parseInt(m[1], 10);
+    const rawContent = m[3];
+
+    // Extract text from <s> sub-segments if present, otherwise strip tags
+    let text = "";
+    const sRegex = /<s[^>]*>([^<]*)<\/s>/g;
+    let sm: RegExpExecArray | null;
+    while ((sm = sRegex.exec(rawContent)) !== null) text += sm[1];
+    if (!text) text = rawContent.replace(/<[^>]+>/g, "");
+
+    text = decodeEntities(text).replace(/\s+/g, " ").trim();
+    if (text) lines.push({ offsetMs, text });
+  }
+
+  return lines;
+}
+
+function linesToText(lines: { offsetMs: number; text: string }[]): string {
+  if (lines.length === 0) return "";
 
   const paragraphs: string[] = [];
   let current: string[] = [];
   let prevOffsetMs = 0;
 
-  for (const line of segments) {
+  for (const line of lines) {
     const gapSec = (line.offsetMs - prevOffsetMs) / 1000;
     if (gapSec >= 3.0 && current.length > 0) {
       paragraphs.push(current.join(" "));
@@ -37,39 +78,43 @@ function segmentsToText(segments: { offsetMs: number; text: string }[]): string 
     .join("\n\n");
 }
 
-// Singleton Innertube instance — reused across requests in the same worker
-let _yt: Innertube | null = null;
-async function getInnertube(): Promise<Innertube> {
-  if (!_yt) {
-    _yt = await Innertube.create({ retrieve_player: false });
-  }
-  return _yt;
-}
+async function fetchTranscriptForVideo(video: { id: string; title: string }): Promise<TranscriptResult> {
+  // 1. Get caption tracks via Android InnerTube player endpoint
+  const playerRes = await fetch(INNERTUBE_PLAYER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "User-Agent": ANDROID_UA },
+    body: JSON.stringify({ context: INNERTUBE_CONTEXT, videoId: video.id }),
+  });
 
-async function fetchTranscriptForVideo(
-  yt: Innertube,
-  video: { id: string; title: string }
-): Promise<TranscriptResult> {
-  const info = await yt.getInfo(video.id);
-  const transcriptInfo = await info.getTranscript();
+  if (!playerRes.ok) throw new Error(`Player API error: ${playerRes.status}`);
 
-  const rawSegments = transcriptInfo.transcript.content?.body?.initial_segments ?? [];
+  const playerData = await playerRes.json();
+  const tracks: { languageCode: string; baseUrl: string }[] =
+    playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
 
-  const lines: { offsetMs: number; text: string }[] = [];
-  for (const seg of rawSegments) {
-    // Filter to TranscriptSegment nodes only (skip TranscriptSectionHeader etc.)
-    if (seg.type !== "TranscriptSegment") continue;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const s = seg as any;
-    const raw: string = s.snippet?.toString?.() ?? "";
-    const text = raw.replace(/\[.*?\]/g, "").replace(/\s+/g, " ").trim();
-    if (!text) continue;
-    lines.push({ offsetMs: Number(s.start_ms) || 0, text });
-  }
+  if (tracks.length === 0) throw new Error("No captions available for this video");
 
-  if (lines.length === 0) throw new Error("No transcript segments found");
+  // 2. Prefer English track, fall back to first available
+  const track =
+    tracks.find((t) => t.languageCode === "en") ??
+    tracks.find((t) => t.languageCode?.startsWith("en")) ??
+    tracks[0];
 
-  const text = segmentsToText(lines);
+  // 3. Fetch the timed-text XML
+  const capRes = await fetch(track.baseUrl, {
+    headers: { "User-Agent": ANDROID_UA },
+  });
+
+  if (!capRes.ok) throw new Error(`Caption fetch error: ${capRes.status}`);
+
+  const xml = await capRes.text();
+  if (!xml) throw new Error("Empty caption response");
+
+  // 4. Parse and group into paragraph blocks
+  const lines = parseTimedTextXml(xml);
+  if (lines.length === 0) throw new Error("No transcript lines parsed");
+
+  const text = linesToText(lines);
   if (!text) throw new Error("Empty transcript after parsing");
 
   return {
@@ -91,10 +136,9 @@ export async function POST(req: NextRequest) {
     }
 
     const targets = videos.slice(0, 5);
-    const yt = await getInnertube();
 
     const results = await Promise.allSettled(
-      targets.map((video) => fetchTranscriptForVideo(yt, video))
+      targets.map((video) => fetchTranscriptForVideo(video))
     );
 
     const transcripts: TranscriptResult[] = [];
