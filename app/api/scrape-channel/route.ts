@@ -135,9 +135,11 @@ export async function POST(req: NextRequest) {
                     const titleRuns = (vr?.title as Record<string, unknown>)
                       ?.runs as { text?: string }[] | undefined;
                     const title = titleRuns?.[0]?.text ?? "";
-                    if (title) videos.push({ id: String(vr.videoId), title });
+                    // Skip Shorts — they rarely have captions
+                    const isShort = /#shorts?\b/i.test(title);
+                    if (title && !isShort) videos.push({ id: String(vr.videoId), title });
                   }
-                  if (videos.length >= 25) break;
+                  if (videos.length >= 30) break;
                 }
                 if (videos.length > 0) break;
               }
@@ -157,8 +159,8 @@ export async function POST(req: NextRequest) {
               const nearby = vtHtml.slice(pos, pos + 400);
               const titleMatch = nearby.match(/"text":"([^"]{5,100})"/);
               const title = titleMatch?.[1] ?? m[1];
-              videos.push({ id: m[1], title });
-              if (videos.length >= 25) break;
+              if (!/#shorts?\b/i.test(title)) videos.push({ id: m[1], title });
+              if (videos.length >= 30) break;
             }
           }
         }
@@ -185,7 +187,7 @@ export async function POST(req: NextRequest) {
               };
             })
             .filter((v) => v.id && v.title)
-            .slice(0, 25);
+            .slice(0, 30);
         }
       } catch { /* non-fatal */ }
     }

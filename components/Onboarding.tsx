@@ -613,22 +613,15 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
       );
 
       if (imported.length === 0) {
-        const failReasons: string[] = (data.failed ?? []).map(
-          (f: { id: string; reason?: string }) => f.reason ?? f
-        );
-        const reasonSummary = failReasons.length > 0
-          ? ` Errors: ${[...new Set(failReasons)].join(" · ")}`
-          : "";
-        setTranscriptStatus(`No transcripts available — captions may be disabled on these videos.${reasonSummary}`);
+        setTranscriptStatus("No captions found — your videos may not have captions enabled. Try uploading scripts manually instead.");
       } else {
         setPendingScripts((prev) => {
           const existingNames = new Set(prev.map((s) => s.name));
           const newOnes = imported.filter((s) => !existingNames.has(s.name));
           return [...prev, ...newOnes];
         });
-        const failCount = (data.failed ?? []).length;
         setTranscriptStatus(
-          `✓ Imported ${imported.length} transcript${imported.length !== 1 ? "s" : ""}${failCount > 0 ? ` · ${failCount} had no captions` : ""}`
+          `✓ Imported ${imported.length} transcript${imported.length !== 1 ? "s" : ""} — that's all YouTube had captions for`
         );
       }
     } catch (e: unknown) {
