@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { withRetry } from "@/lib/openai-retry";
 
+export const runtime = "edge";
+export const maxDuration = 60;
+
 export interface ScrapedVideo {
   id: string;
   title: string;
