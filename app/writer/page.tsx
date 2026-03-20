@@ -698,7 +698,7 @@ ${bodyHtml}
             )}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}>
               <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: styleProfile ? "var(--green)" : "var(--accent)" }} />
-              {creatorProfile.name || "Creator"}
+              {creatorProfile?.name || "Creator"}
               {styleProfile && <span style={{ color: "var(--border-light)" }}>· {styleProfile.scripts.length} scripts</span>}
             </div>
             <button
