@@ -27,11 +27,11 @@ export async function POST(req: NextRequest) {
     const { channelUrl, apiKey } = await req.json();
     const resolvedKey = apiKey?.trim() || process.env.OPENAI_API_KEY || "";
 
-    if (!channelUrl?.trim() || !resolvedKey) {
-      return NextResponse.json({ error: "Channel URL and API key are required." }, { status: 400 });
+    if (!channelUrl?.trim()) {
+      return NextResponse.json({ error: "Channel URL is required." }, { status: 400 });
     }
 
-    const openai = new OpenAI({ apiKey: resolvedKey });
+    const openai = resolvedKey ? new OpenAI({ apiKey: resolvedKey }) : null;
 
     // Normalize URL
     let url = channelUrl.trim();
@@ -212,13 +212,22 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // ── Extract identity with GPT ────────────────────────────────────────────
-    const completion = await withRetry(() => openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: `You are analyzing a YouTube channel's public data to infer the creator's identity and positioning. Use ONLY what the data actually shows — don't invent things not supported by the content.
+    // ── Extract identity with GPT (only if API key is available) ────────────
+    let identityExtract = {
+      credibilityStack: "",
+      uniqueMethod: "",
+      contraryBelief: "",
+      targetPerson: "",
+    };
+
+    if (openai) {
+      try {
+        const completion = await withRetry(() => openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: `You are analyzing a YouTube channel's public data to infer the creator's identity and positioning. Use ONLY what the data actually shows — don't invent things not supported by the content.
 
 ${context}
 
@@ -231,29 +240,22 @@ Return ONLY valid JSON in this exact shape:
   "contraryBelief": "Based on the content themes and framing of video titles — what does this creator appear to believe that challenges or contradicts the standard advice in their space? What conventional wisdom do they push back on?",
   "targetPerson": "Based on the content topics and language used — who is the specific person this channel is designed for? Describe their situation, their problem, and what outcome they're seeking."
 }`,
-        },
-      ],
-      temperature: 0.25,
-      max_tokens: 1200,
-      response_format: { type: "json_object" },
-    }));
+            },
+          ],
+          temperature: 0.25,
+          max_tokens: 1200,
+          response_format: { type: "json_object" },
+        }));
 
-    let identityExtract = {
-      credibilityStack: "",
-      uniqueMethod: "",
-      contraryBelief: "",
-      targetPerson: "",
-    };
-
-    try {
-      const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}");
-      identityExtract = {
-        credibilityStack: parsed.credibilityStack ?? "",
-        uniqueMethod: parsed.uniqueMethod ?? "",
-        contraryBelief: parsed.contraryBelief ?? "",
-        targetPerson: parsed.targetPerson ?? "",
-      };
-    } catch { /* return empty extract */ }
+        const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}");
+        identityExtract = {
+          credibilityStack: parsed.credibilityStack ?? "",
+          uniqueMethod: parsed.uniqueMethod ?? "",
+          contraryBelief: parsed.contraryBelief ?? "",
+          targetPerson: parsed.targetPerson ?? "",
+        };
+      } catch { /* skip identity extraction, still return videos */ }
+    }
 
     return NextResponse.json({
       channelName,
