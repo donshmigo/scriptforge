@@ -353,7 +353,7 @@ export default function ContentFactoryPage() {
                   ↓ Download CSV
                 </button>
                 <Link
-                  href="/"
+                  href="/writer"
                   className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all"
                   style={{ background: "var(--accent)", color: "#fff" }}
                 >
@@ -373,7 +373,7 @@ export default function ContentFactoryPage() {
               The Content Factory plans your ideas. ScriptForge writes the complete YouTube and Reel scripts — matched to your voice and writing style.
             </p>
             <Link
-              href="/"
+              href="/writer"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold"
               style={{ background: "var(--accent)", color: "#fff", boxShadow: "0 0 28px var(--accent-glow)" }}
             >
@@ -480,7 +480,7 @@ export default function ContentFactoryPage() {
                   <p className="text-xs font-semibold mb-1" style={{ color: "var(--accent)" }}>Content Type: {selectedDay.type}</p>
                   <p className="text-sm" style={{ color: "var(--muted)" }}>Full scripts are generated for Days 1–3. Use this topic and content type as a brief to write your own script — or open ScriptForge to generate it automatically.</p>
                   <Link
-                    href="/"
+                    href="/writer"
                     className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 rounded-lg text-xs font-semibold"
                     style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(124,92,252,0.25)" }}
                   >

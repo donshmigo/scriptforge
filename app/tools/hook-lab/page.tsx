@@ -103,7 +103,7 @@ export default function HookLabPage() {
       {/* Header Nav */}
       <nav className="border-b sticky top-0 z-10 backdrop-blur-sm" style={{ borderColor: "var(--border)", background: "rgba(15,15,19,0.92)" }}>
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
+          <Link href="/" className="flex items-center gap-2.5 group" title="Home">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{ background: "var(--accent)" }}>▶</div>
             <span className="text-sm font-semibold" style={{ color: "var(--muted)" }}>ScriptForge</span>
           </Link>
@@ -136,7 +136,7 @@ export default function HookLabPage() {
               <h2 className="text-xl font-bold mb-2" style={{ color: "var(--foreground)" }}>Daily limit reached</h2>
               <p style={{ color: "var(--muted)" }}>You&apos;ve used all {DAILY_LIMIT} free generations for today. Come back tomorrow — or try ScriptForge for unlimited scripts.</p>
               <Link
-                href="/"
+                href="/writer"
                 className="inline-flex items-center gap-2 mt-6 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
                 style={{ background: "var(--accent)", color: "#fff" }}
               >
@@ -246,7 +246,7 @@ export default function HookLabPage() {
             ScriptForge generates complete YouTube and Reel scripts matched to your exact writing style — not just hooks.
           </p>
           <Link
-            href="/"
+            href="/writer"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all"
             style={{ background: "var(--accent)", color: "#fff", boxShadow: "0 0 28px var(--accent-glow)" }}
           >
