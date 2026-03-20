@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { withRetry } from "@/lib/openai-retry";
 
+export const maxDuration = 300;
+
 export interface AnalyzeRequest {
   scripts: Array<{ name: string; text: string }>;
   apiKey: string;
