@@ -602,7 +602,12 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videos: videosToUse }),
       });
-      const data = await res.json();
+      let data: { transcripts?: unknown[]; failed?: unknown[]; error?: string };
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Transcript service timed out — please try again.");
+      }
       if (!res.ok) throw new Error(data.error || "Transcript fetch failed.");
 
       const imported: SampleScript[] = (data.transcripts ?? []).map(
