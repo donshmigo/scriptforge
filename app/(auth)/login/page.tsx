@@ -1,15 +1,13 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const FONT_DISPLAY = "var(--font-syne), system-ui, sans-serif";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -425,5 +423,13 @@ export default function LoginPage() {
         input::placeholder { color: var(--muted); opacity: 0.6; }
       `}</style>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "var(--background)" }} />}>
+      <LoginForm />
+    </Suspense>
   );
 }
