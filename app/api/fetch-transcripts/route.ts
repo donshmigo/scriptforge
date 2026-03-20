@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { exec } from "child_process";
-import { promisify } from "util";
-import * as fs from "fs/promises";
-import * as path from "path";
-import * as os from "os";
-
-const execAsync = promisify(exec);
+import { Innertube } from "youtubei.js";
 
 export interface TranscriptResult {
   id: string;
@@ -19,126 +13,47 @@ export interface FetchTranscriptsResponse {
   failed: string[];
 }
 
-/** Parse a VTT timestamp like "00:01:23.456" into seconds */
-function vttTimeToSeconds(ts: string): number {
-  const parts = ts.trim().split(":");
-  if (parts.length === 3) {
-    return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
-  }
-  if (parts.length === 2) {
-    return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
-  }
-  return 0;
-}
-
-/** Clean a single VTT text line — strip inline tags and HTML entities */
-function cleanLine(line: string): string {
-  return line
-    .replace(/<[^>]+>/g, "")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&nbsp;/g, " ")
-    .trim();
-}
-
-/** Return true if a line is VTT metadata (not spoken text) */
-function isMetaLine(line: string): boolean {
-  const t = line.trim();
-  if (!t) return true;
-  if (t.startsWith("WEBVTT") || t.startsWith("Kind:") || t.startsWith("Language:")) return true;
-  if (/^\d{2}:\d{2}[:.]\d/.test(t)) return true;
-  if (/^\d+$/.test(t)) return true;
-  return false;
-}
-
-interface VttCue {
-  startSec: number;
-  endSec: number;
-  lines: string[];
-}
-
 /**
- * Parse a VTT subtitle file into prose that preserves the creator's pacing.
- *
- * YouTube auto-captions use "rolling" cues — the same line appears in 2–4
- * consecutive cue blocks as it scrolls across the screen. We use a sliding
- * window to skip any line seen in the last DEDUP_WINDOW cues, then use the
- * inter-cue gap times to inject natural pause markers:
- *   gap ≥ 3.0 s  →  new paragraph (beat / section break)
- *   gap ≥ 1.5 s  →  " ... "  (short pause / breath)
+ * Convert raw transcript segments from youtubei.js into clean prose.
+ * Each segment has a .snippet.text — we join them with space, inserting
+ * paragraph breaks where the timestamp gap suggests a natural pause.
  */
-function parseVtt(vtt: string): string {
-  const blocks = vtt.split(/\n\n+/);
-  const cues: VttCue[] = [];
+function segmentsToText(
+  segments: Array<{ start_ms?: string | number; snippet?: { text?: string } }>
+): string {
+  const lines: Array<{ startMs: number; text: string }> = [];
 
-  for (const block of blocks) {
-    const rawLines = block.split("\n").map((l) => l.trim());
-    const tsLine = rawLines.find((l) => /^\d{2}:\d{2}[:.]\d/.test(l));
-    if (!tsLine) continue;
-
-    const tsParts = tsLine.split("-->");
-    const startSec = vttTimeToSeconds(tsParts[0]);
-    const endSec = tsParts[1] ? vttTimeToSeconds(tsParts[1].split(/\s/)[0]) : startSec;
-
-    const textLines = rawLines
-      .filter((l) => !isMetaLine(l))
-      .map(cleanLine)
-      .filter(Boolean);
-
-    if (textLines.length > 0) {
-      cues.push({ startSec, endSec, lines: textLines });
-    }
+  for (const seg of segments) {
+    const raw = seg?.snippet?.text;
+    if (!raw) continue;
+    const text = raw
+      .replace(/\[.*?\]/g, "")   // strip [Music], [Applause] etc
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!text) continue;
+    const startMs =
+      typeof seg.start_ms === "number"
+        ? seg.start_ms
+        : parseInt(String(seg.start_ms ?? "0"), 10);
+    lines.push({ startMs, text });
   }
 
-  if (cues.length === 0) return "";
-
-  // Sliding-window dedup: track when each line was last seen (cue index)
-  const DEDUP_WINDOW = 6;
-  const lastSeen = new Map<string, number>();
+  if (lines.length === 0) return "";
 
   const paragraphs: string[] = [];
-  let currentParagraph: string[] = [];
-  let prevEndSec = 0;
-  let lastAddedWasPause = false;
+  let current: string[] = [];
+  let prevStartMs = 0;
 
-  for (let i = 0; i < cues.length; i++) {
-    const cue = cues[i];
-    const gap = i === 0 ? 0 : cue.startSec - prevEndSec;
-
-    // Only keep lines not seen in the recent window
-    const newLines = cue.lines.filter((l) => {
-      const seen = lastSeen.get(l);
-      return seen === undefined || i - seen > DEDUP_WINDOW;
-    });
-
-    // Always update the seen map for all lines in this cue
-    for (const l of cue.lines) lastSeen.set(l, i);
-
-    // Skip cue entirely if no new content
-    if (newLines.length === 0) {
-      prevEndSec = cue.endSec;
-      continue;
+  for (const line of lines) {
+    const gapSec = (line.startMs - prevStartMs) / 1000;
+    if (gapSec >= 3.0 && current.length > 0) {
+      paragraphs.push(current.join(" "));
+      current = [];
     }
-
-    // Insert pacing markers — only when we have real new content to follow them
-    if (gap >= 3.0 && currentParagraph.length > 0) {
-      paragraphs.push(currentParagraph.join(" "));
-      currentParagraph = [];
-      lastAddedWasPause = false;
-    } else if (gap >= 1.5 && currentParagraph.length > 0 && !lastAddedWasPause) {
-      currentParagraph.push("...");
-      lastAddedWasPause = true;
-    }
-
-    currentParagraph.push(...newLines);
-    lastAddedWasPause = false;
-    prevEndSec = cue.endSec;
+    current.push(line.text);
+    prevStartMs = line.startMs;
   }
-
-  if (currentParagraph.length > 0) {
-    paragraphs.push(currentParagraph.join(" "));
-  }
+  if (current.length > 0) paragraphs.push(current.join(" "));
 
   return paragraphs
     .map((p) => p.replace(/\s+/g, " ").trim())
@@ -147,34 +62,25 @@ function parseVtt(vtt: string): string {
 }
 
 async function fetchTranscriptForVideo(
-  videoId: string,
-  tmpDir: string
-): Promise<string> {
-  const outTemplate = path.join(tmpDir, videoId);
+  yt: Innertube,
+  video: { id: string; title: string }
+): Promise<TranscriptResult> {
+  const info = await yt.getInfo(video.id);
+  const transcriptInfo = await info.getTranscript();
 
-  // yt-dlp: download auto-generated English subtitles, skip video download
-  const cmd = [
-    "yt-dlp",
-    "--write-auto-sub",
-    "--sub-lang", "en",
-    "--skip-download",
-    "--sub-format", "vtt",
-    "--no-warnings",
-    "--quiet",
-    "-o", `"${outTemplate}"`,
-    `"https://www.youtube.com/watch?v=${videoId}"`,
-  ].join(" ");
+  const segments =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (transcriptInfo as any)?.transcript?.content?.body?.initial_segments ?? [];
 
-  await execAsync(cmd, { timeout: 30_000 });
-
-  // yt-dlp writes to <outTemplate>.en.vtt
-  const vttPath = `${outTemplate}.en.vtt`;
-  const vtt = await fs.readFile(vttPath, "utf-8");
-  await fs.unlink(vttPath).catch(() => {});
-
-  const text = parseVtt(vtt);
+  const text = segmentsToText(segments);
   if (!text) throw new Error("Empty transcript after parsing");
-  return text;
+
+  return {
+    id: video.id,
+    title: video.title,
+    text,
+    wordCount: text.split(/\s+/).filter(Boolean).length,
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -187,25 +93,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No videos provided." }, { status: 400 });
     }
 
-    // Limit to 5 videos to keep API costs and analysis token usage manageable
+    // Limit to 5 videos to keep token usage manageable
     const targets = videos.slice(0, 5);
-    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "yt-transcripts-"));
+
+    // Create one Innertube session reused for all videos
+    const yt = await Innertube.create({ generate_session_locally: true });
 
     const results = await Promise.allSettled(
-      targets.map(async (video) => {
-        const text = await fetchTranscriptForVideo(video.id, tmpDir);
-        const wordCount = text.split(/\s+/).filter(Boolean).length;
-        return {
-          id: video.id,
-          title: video.title,
-          text,
-          wordCount,
-        } satisfies TranscriptResult;
-      })
+      targets.map((video) => fetchTranscriptForVideo(yt, video))
     );
-
-    // Cleanup temp dir
-    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {});
 
     const transcripts: TranscriptResult[] = [];
     const failed: string[] = [];
@@ -218,10 +114,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    return NextResponse.json({
-      transcripts,
-      failed,
-    } satisfies FetchTranscriptsResponse);
+    return NextResponse.json({ transcripts, failed } satisfies FetchTranscriptsResponse);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to fetch transcripts.";
     return NextResponse.json({ error: message }, { status: 500 });

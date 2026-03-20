@@ -810,7 +810,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
       {scrapedVideos.length > 0 && (
         <div className="rounded-xl p-3 flex flex-col gap-1.5" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
           <p className="text-xs font-medium mb-0.5" style={{ color: "var(--muted)" }}>Recent videos found on your channel:</p>
-          <div className="flex flex-col gap-0.5 max-h-28 overflow-y-auto">
+          <div className="flex flex-col gap-0.5 max-h-28 overflow-y-auto select-none">
             {scrapedVideos.map((v, i) => (
               <p key={v.id} className="text-xs leading-5 truncate" style={{ color: "var(--foreground)" }}>
                 <span style={{ color: "var(--border-light)" }}>#{i + 1}</span> {v.title}
