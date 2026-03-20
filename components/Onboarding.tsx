@@ -630,7 +630,9 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
       );
 
       if (imported.length === 0) {
-        setTranscriptStatus("No captions found — your videos may not have captions enabled. Try uploading scripts manually instead.");
+        const reasons = [...new Set((data.failed ?? []).map((f: any) => f.reason).filter(Boolean))];
+        const detail = reasons.length ? ` (${reasons.slice(0, 2).join(", ")})` : "";
+        setTranscriptStatus(`No captions found${detail} — try uploading scripts manually.`);
       } else {
         setPendingScripts((prev) => {
           const existingNames = new Set(prev.map((s) => s.name));
