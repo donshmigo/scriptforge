@@ -15,20 +15,25 @@ export interface FetchTranscriptsResponse {
   failed: { id: string; reason: string }[];
 }
 
-// YouTube's Android InnerTube client — bypasses bot detection on the player endpoint
 const ANDROID_UA = "com.google.android.youtube/20.10.38 (Linux; U; Android 14)";
+const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const INNERTUBE_PLAYER_URL = "https://www.youtube.com/youtubei/v1/player?prettyPrint=false";
-const INNERTUBE_CONTEXT = {
-  client: {
-    clientName: "ANDROID",
-    clientVersion: "20.10.38",
-    androidSdkVersion: 34,
-    osName: "Android",
-    osVersion: "14",
-    hl: "en",
-    gl: "US",
+
+// Try multiple InnerTube clients in order — different clients return different caption data
+const CLIENTS = [
+  {
+    ua: ANDROID_UA,
+    context: { client: { clientName: "ANDROID", clientVersion: "20.10.38" } },
   },
-};
+  {
+    ua: BROWSER_UA,
+    context: { client: { clientName: "WEB", clientVersion: "2.20240101.09.00", hl: "en", gl: "US" } },
+  },
+  {
+    ua: BROWSER_UA,
+    context: { client: { clientName: "TVHTML5", clientVersion: "7.20240101.16.00", hl: "en", gl: "US" } },
+  },
+];
 
 function decodeEntities(str: string): string {
   return str
@@ -45,8 +50,7 @@ function decodeEntities(str: string): string {
 function parseTimedTextXml(xml: string): { offsetMs: number; text: string }[] {
   const lines: { offsetMs: number; text: string }[] = [];
 
-  // srv3 format: <p t="OFFSET_MS" d="DURATION_MS" ...> with optional <s> sub-elements
-  // Use flexible attribute matching — YouTube attribute order is not guaranteed
+  // srv3 format: <p t="OFFSET_MS" ...> — flexible attribute order
   const pRegex = /<p\b[^>]*\bt="(\d+)"[^>]*>([\s\S]*?)<\/p>/g;
   let m: RegExpExecArray | null;
 
@@ -54,7 +58,6 @@ function parseTimedTextXml(xml: string): { offsetMs: number; text: string }[] {
     const offsetMs = parseInt(m[1], 10);
     const rawContent = m[2];
 
-    // Extract text from <s> sub-segments if present, otherwise strip all tags
     let text = "";
     const sRegex = /<s[^>]*>([^<]*)<\/s>/g;
     let sm: RegExpExecArray | null;
@@ -67,7 +70,7 @@ function parseTimedTextXml(xml: string): { offsetMs: number; text: string }[] {
 
   if (lines.length > 0) return lines;
 
-  // Fallback: srv1 format <text start="0.5" dur="2.0">...</text>
+  // srv1 fallback: <text start="0.5" dur="2.0">...</text>
   const textRegex = /<text\b[^>]*\bstart="([\d.]+)"[^>]*>([\s\S]*?)<\/text>/g;
   while ((m = textRegex.exec(xml)) !== null) {
     const offsetMs = Math.round(parseFloat(m[1]) * 1000);
@@ -102,34 +105,37 @@ function linesToText(lines: { offsetMs: number; text: string }[]): string {
     .join("\n\n");
 }
 
+async function getCaptionTracks(videoId: string): Promise<{ languageCode: string; baseUrl: string }[]> {
+  for (const client of CLIENTS) {
+    try {
+      const res = await fetch(INNERTUBE_PLAYER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "User-Agent": client.ua },
+        body: JSON.stringify({ context: client.context, videoId }),
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const tracks: { languageCode: string; baseUrl: string }[] =
+        data?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+      if (tracks.length > 0) return tracks;
+    } catch {
+      // try next client
+    }
+  }
+  return [];
+}
+
 async function fetchTranscriptForVideo(video: { id: string; title: string }): Promise<TranscriptResult> {
-  // 1. Get caption tracks via Android InnerTube player endpoint
-  const playerRes = await fetch(INNERTUBE_PLAYER_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "User-Agent": ANDROID_UA },
-    body: JSON.stringify({
-      context: INNERTUBE_CONTEXT,
-      videoId: video.id,
-      contentCheckOk: true,
-      racyCheckOk: true,
-    }),
-  });
-
-  if (!playerRes.ok) throw new Error(`Player API error: ${playerRes.status}`);
-
-  const playerData = await playerRes.json();
-  const tracks: { languageCode: string; baseUrl: string }[] =
-    playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+  const tracks = await getCaptionTracks(video.id);
 
   if (tracks.length === 0) throw new Error("No captions available for this video");
 
-  // 2. Prefer English track, fall back to first available
   const track =
     tracks.find((t) => t.languageCode === "en") ??
     tracks.find((t) => t.languageCode?.startsWith("en")) ??
     tracks[0];
 
-  // 3. Force srv3 format for consistent parsing
+  // Force srv3 format for consistent XML parsing
   const sep = track.baseUrl.includes("?") ? "&" : "?";
   const captionUrl = track.baseUrl.includes("fmt=")
     ? track.baseUrl
@@ -144,9 +150,8 @@ async function fetchTranscriptForVideo(video: { id: string; title: string }): Pr
   const xml = await capRes.text();
   if (!xml) throw new Error("Empty caption response");
 
-  // 4. Parse and group into paragraph blocks
   const lines = parseTimedTextXml(xml);
-  if (lines.length === 0) throw new Error(`No transcript lines parsed (xml length: ${xml.length})`);
+  if (lines.length === 0) throw new Error(`No transcript lines parsed (xml: ${xml.slice(0, 100)})`);
 
   const text = linesToText(lines);
   if (!text) throw new Error("Empty transcript after parsing");
