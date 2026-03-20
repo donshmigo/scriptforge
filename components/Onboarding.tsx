@@ -235,9 +235,15 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ channelUrl: form.channelUrl, apiKey: "" }),
       });
-      const data = await res.json();
+      let data: Record<string, unknown>;
+      try {
+        data = await res.json();
+      } catch {
+        setScrapeError("Could not reach channel — please try again.");
+        return;
+      }
       if (!res.ok) {
-        setScrapeError(data.error || "Could not scrape channel.");
+        setScrapeError((data.error as string) || "Could not scrape channel.");
         // Still advance — user can fill manually
       } else if (data.identityExtract) {
         const { credibilityStack, uniqueMethod, contraryBelief, targetPerson } = data.identityExtract;
@@ -583,7 +589,12 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ channelUrl: channelUrlToUse, apiKey: "" }),
         });
-        const scrapeData = await scrapeRes.json();
+        let scrapeData: { videos?: unknown[]; error?: string };
+        try {
+          scrapeData = await scrapeRes.json();
+        } catch {
+          throw new Error("Channel scrape timed out — please try again.");
+        }
         if (!scrapeRes.ok) throw new Error(scrapeData.error || "Could not reach channel.");
         videosToUse = scrapeData.videos ?? [];
         if (videosToUse.length > 0) setScrapedVideos(videosToUse);
