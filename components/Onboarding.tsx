@@ -304,8 +304,9 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
           apiKey: "",
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Analysis failed.");
+      let data: Record<string, unknown>;
+      try { data = await res.json(); } catch { throw new Error("Analysis timed out — please try again."); }
+      if (!res.ok) throw new Error((data.error as string) || "Analysis failed.");
 
       // Build style profile
       const profile: StyleProfile = {

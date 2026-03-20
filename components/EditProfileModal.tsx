@@ -153,9 +153,10 @@ export default function EditProfileModal({
       const formData = new FormData();
       Array.from(files).forEach((f) => formData.append("files", f));
       const res = await fetch("/api/parse-doc", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed.");
-      const newScripts: SampleScript[] = data.scripts.map(
+      let data: Record<string, unknown>;
+      try { data = await res.json(); } catch { throw new Error("Upload request timed out — try again."); }
+      if (!res.ok) throw new Error((data.error as string) || "Upload failed.");
+      const newScripts: SampleScript[] = (data.scripts as { name: string; text: string }[]).map(
         (s: { name: string; text: string }) => ({ name: s.name, text: s.text })
       );
       setPendingScripts((prev) => {
@@ -181,8 +182,9 @@ export default function EditProfileModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ channelUrl, apiKey }),
       });
-      const scrapeData = await scrapeRes.json();
-      if (!scrapeRes.ok) throw new Error(scrapeData.error || "Could not scrape channel.");
+      let scrapeData: Record<string, unknown>;
+      try { scrapeData = await scrapeRes.json(); } catch { throw new Error("Channel request timed out — try again."); }
+      if (!scrapeRes.ok) throw new Error((scrapeData.error as string) || "Could not scrape channel.");
 
       const videos: { id: string; title: string }[] = scrapeData.videos ?? [];
       if (videos.length === 0) {
@@ -197,8 +199,9 @@ export default function EditProfileModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videos }),
       });
-      const transcriptData = await transcriptRes.json();
-      if (!transcriptRes.ok) throw new Error(transcriptData.error || "Transcript fetch failed.");
+      let transcriptData: Record<string, unknown>;
+      try { transcriptData = await transcriptRes.json(); } catch { throw new Error("Transcript request timed out — try again."); }
+      if (!transcriptRes.ok) throw new Error((transcriptData.error as string) || "Transcript fetch failed.");
 
       const imported: SampleScript[] = (transcriptData.transcripts ?? []).map(
         (t: { title: string; text: string }) => ({ name: t.title, text: t.text })
@@ -239,8 +242,9 @@ export default function EditProfileModal({
           apiKey,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Analysis failed.");
+      let data: Record<string, unknown>;
+      try { data = await res.json(); } catch { throw new Error("Analysis request timed out — try again."); }
+      if (!res.ok) throw new Error((data.error as string) || "Analysis failed.");
       const newProfile: StyleProfile = {
         scripts: pendingScripts.map((s) => ({
           name: s.name,
@@ -295,9 +299,10 @@ export default function EditProfileModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ channelUrl: channelUrl.trim(), apiKey: "" }),
       });
-      const data = await res.json();
+      let data: Record<string, unknown>;
+      try { data = await res.json(); } catch { setScrapeStatus("Request timed out — try again."); return; }
       if (!res.ok) {
-        setScrapeStatus(data.error || "Could not reach channel. Check the URL and try again.");
+        setScrapeStatus((data.error as string) || "Could not reach channel. Check the URL and try again.");
         return;
       }
       if (data.identityExtract) {
@@ -328,9 +333,10 @@ export default function EditProfileModal({
       const formData = new FormData();
       Array.from(files).forEach((f) => formData.append("files", f));
       const res = await fetch("/api/parse-doc", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed.");
-      const texts: string[] = data.scripts.map((s: { text: string }) => s.text);
+      let data: Record<string, unknown>;
+      try { data = await res.json(); } catch { throw new Error("Upload request timed out — try again."); }
+      if (!res.ok) throw new Error((data.error as string) || "Upload failed.");
+      const texts: string[] = (data.scripts as { text: string }[]).map((s) => s.text);
       setter(texts.join("\n\n---\n\n"));
     } catch (e: unknown) {
       setStyleError(e instanceof Error ? e.message : "Upload failed.");
@@ -357,8 +363,9 @@ export default function EditProfileModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ guideType, currentContent, feedback, personaId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Update failed.");
+      let data: Record<string, unknown>;
+      try { data = await res.json(); } catch { throw new Error("Request timed out — try again."); }
+      if (!res.ok) throw new Error((data.error as string) || "Update failed.");
       onSuccess(data.updatedContent);
       clearFeedback();
     } catch (e: unknown) {
