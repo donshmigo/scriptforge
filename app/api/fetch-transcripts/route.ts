@@ -169,25 +169,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No videos provided." }, { status: 400 });
     }
 
-    const targets = videos.slice(0, 5);
-
-    const results = await Promise.allSettled(
-      targets.map((video) => fetchTranscriptForVideo(video))
-    );
-
     const transcripts: TranscriptResult[] = [];
     const failed: { id: string; reason: string }[] = [];
 
-    results.forEach((result, i) => {
-      if (result.status === "fulfilled") {
-        transcripts.push(result.value);
-      } else {
+    // Try videos one by one until we have 5 successful transcripts
+    for (const video of videos) {
+      if (transcripts.length >= 5) break;
+      try {
+        const result = await fetchTranscriptForVideo(video);
+        transcripts.push(result);
+      } catch (err) {
         failed.push({
-          id: targets[i].id,
-          reason: result.reason instanceof Error ? result.reason.message : String(result.reason),
+          id: video.id,
+          reason: err instanceof Error ? err.message : String(err),
         });
       }
-    });
+    }
 
     return NextResponse.json({ transcripts, failed } satisfies FetchTranscriptsResponse);
   } catch (err: unknown) {
