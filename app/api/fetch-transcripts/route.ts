@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 export interface TranscriptResult {
   id: string;
@@ -14,7 +14,10 @@ export interface FetchTranscriptsResponse {
   failed: { id: string; reason: string }[];
 }
 
-const ANDROID_UA = "com.google.android.youtube/20.10.38 (Linux; U; Android 14)";
+const ANDROID_UA = "com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip";
+
+// Base64-encoded protobuf that requests caption/subtitle data in the player response
+const CAPTION_PARAMS = "CgIQBg==";
 
 function decodeEntities(str: string): string {
   return str
@@ -63,45 +66,64 @@ function toText(lines: { offsetMs: number; text: string }[]): string {
   return paras.map(p => p.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n\n");
 }
 
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+async function callPlayerApi(videoId: string, client: "ANDROID" | "TVHTML5"): Promise<{ languageCode: string; baseUrl: string }[]> {
+  const isAndroid = client === "ANDROID";
+  const body = isAndroid
+    ? {
+        context: {
+          client: {
+            clientName: "ANDROID",
+            clientVersion: "20.10.38",
+            androidSdkVersion: 34,
+            hl: "en",
+            gl: "US",
+          },
+        },
+        videoId,
+        params: CAPTION_PARAMS,
+      }
+    : {
+        context: {
+          client: {
+            clientName: "TVHTML5",
+            clientVersion: "7.20230405.08.01",
+            hl: "en",
+            gl: "US",
+          },
+        },
+        videoId,
+        params: CAPTION_PARAMS,
+      };
+
+  const res = await fetch(
+    `https://www.youtube.com/youtubei/v1/player?key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM394&prettyPrint=false`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": isAndroid ? ANDROID_UA : "Mozilla/5.0",
+        "X-Youtube-Client-Name": isAndroid ? "3" : "7",
+        "X-Youtube-Client-Version": isAndroid ? "20.10.38" : "7.20230405.08.01",
+      },
+      body: JSON.stringify(body),
+    }
+  );
+
+  if (!res.ok) throw new Error(`Player API ${res.status}`);
+  const data = await res.json();
+  return data?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
 }
 
 async function fetchTranscript(video: { id: string; title: string }): Promise<TranscriptResult> {
-  // Method 1: Direct timedtext URL — fastest, no session needed
-  for (const params of [`v=${video.id}&lang=en&kind=asr&fmt=srv3`, `v=${video.id}&lang=en&fmt=srv3`]) {
-    try {
-      const res = await fetch(`https://www.youtube.com/api/timedtext?${params}`, {
-        headers: { "User-Agent": ANDROID_UA },
-      });
-      if (res.ok) {
-        const xml = await res.text();
-        const lines = parseXml(xml);
-        if (lines.length > 0) {
-          const text = toText(lines);
-          if (text) return { id: video.id, title: video.title, text, wordCount: text.split(/\s+/).filter(Boolean).length };
-        }
-      }
-    } catch { /* try next */ }
+  // Try Android client first, fall back to TVHTML5 if no captions returned
+  let tracks = await callPlayerApi(video.id, "ANDROID");
+
+  if (tracks.length === 0) {
+    await new Promise(r => setTimeout(r, 300));
+    tracks = await callPlayerApi(video.id, "TVHTML5");
   }
 
-  // Method 2: InnerTube Android player — get caption track URL then fetch XML
-  const playerRes = await fetch("https://www.youtube.com/youtubei/v1/player?prettyPrint=false", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "User-Agent": ANDROID_UA },
-    body: JSON.stringify({
-      context: { client: { clientName: "ANDROID", clientVersion: "20.10.38" } },
-      videoId: video.id,
-    }),
-  });
-
-  if (!playerRes.ok) throw new Error(`Player API ${playerRes.status}`);
-
-  const playerData = await playerRes.json();
-  const tracks: { languageCode: string; baseUrl: string }[] =
-    playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-
-  if (tracks.length === 0) throw new Error("No captions available");
+  if (tracks.length === 0) throw new Error("No captions");
 
   const track =
     tracks.find(t => t.languageCode === "en") ??
@@ -112,14 +134,14 @@ async function fetchTranscript(video: { id: string; title: string }): Promise<Tr
   const capUrl = track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}${sep}fmt=srv3`;
 
   const capRes = await fetch(capUrl, { headers: { "User-Agent": ANDROID_UA } });
-  if (!capRes.ok) throw new Error(`Caption fetch ${capRes.status}`);
+  if (!capRes.ok) throw new Error(`Caption ${capRes.status}`);
 
   const xml = await capRes.text();
   const lines = parseXml(xml);
-  if (!lines.length) throw new Error("Could not parse captions");
+  if (!lines.length) throw new Error("Empty captions");
 
   const text = toText(lines);
-  if (!text) throw new Error("Empty transcript");
+  if (!text) throw new Error("Empty text");
 
   return { id: video.id, title: video.title, text, wordCount: text.split(/\s+/).filter(Boolean).length };
 }
@@ -129,21 +151,23 @@ export async function POST(req: NextRequest) {
     const { videos } = (await req.json()) as { videos: { id: string; title: string }[] };
     if (!videos?.length) return NextResponse.json({ error: "No videos provided." }, { status: 400 });
 
+    // Only try the first 10 — more than that causes rate limiting
+    const candidates = videos.slice(0, 10);
     const transcripts: TranscriptResult[] = [];
     const failed: { id: string; reason: string }[] = [];
 
-    for (const video of videos) {
+    for (const video of candidates) {
       if (transcripts.length >= 5) break;
+
+      // Small delay between requests to avoid rate limiting
+      if (transcripts.length + failed.length > 0) {
+        await new Promise(r => setTimeout(r, 500));
+      }
+
       try {
         transcripts.push(await fetchTranscript(video));
       } catch (err) {
-        // Retry once after a short delay in case of rate limiting
-        await sleep(800);
-        try {
-          transcripts.push(await fetchTranscript(video));
-        } catch (err2) {
-          failed.push({ id: video.id, reason: err2 instanceof Error ? err2.message : String(err2) });
-        }
+        failed.push({ id: video.id, reason: err instanceof Error ? err.message : String(err) });
       }
     }
 
