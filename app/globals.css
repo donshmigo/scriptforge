@@ -26,6 +26,20 @@
   box-sizing: border-box;
 }
 
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(124, 92, 252, 0.25);
+  color: var(--foreground);
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

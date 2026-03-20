@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Innertube } from "youtubei.js";
+import { YoutubeTranscript } from "youtube-transcript";
 
 export interface TranscriptResult {
   id: string;
@@ -13,45 +13,40 @@ export interface FetchTranscriptsResponse {
   failed: string[];
 }
 
-/**
- * Convert raw transcript segments from youtubei.js into clean prose.
- * Each segment has a .snippet.text — we join them with space, inserting
- * paragraph breaks where the timestamp gap suggests a natural pause.
- */
-function segmentsToText(
-  segments: Array<{ start_ms?: string | number; snippet?: { text?: string } }>
-): string {
-  const lines: Array<{ startMs: number; text: string }> = [];
+interface TranscriptSegment {
+  text: string;
+  duration: number;
+  offset: number;
+}
+
+function segmentsToText(segments: TranscriptSegment[]): string {
+  const lines: Array<{ offsetMs: number; text: string }> = [];
 
   for (const seg of segments) {
-    const raw = seg?.snippet?.text;
+    const raw = seg?.text;
     if (!raw) continue;
     const text = raw
-      .replace(/\[.*?\]/g, "")   // strip [Music], [Applause] etc
+      .replace(/\[.*?\]/g, "")
       .replace(/\s+/g, " ")
       .trim();
     if (!text) continue;
-    const startMs =
-      typeof seg.start_ms === "number"
-        ? seg.start_ms
-        : parseInt(String(seg.start_ms ?? "0"), 10);
-    lines.push({ startMs, text });
+    lines.push({ offsetMs: seg.offset ?? 0, text });
   }
 
   if (lines.length === 0) return "";
 
   const paragraphs: string[] = [];
   let current: string[] = [];
-  let prevStartMs = 0;
+  let prevOffsetMs = 0;
 
   for (const line of lines) {
-    const gapSec = (line.startMs - prevStartMs) / 1000;
+    const gapSec = (line.offsetMs - prevOffsetMs) / 1000;
     if (gapSec >= 3.0 && current.length > 0) {
       paragraphs.push(current.join(" "));
       current = [];
     }
     current.push(line.text);
-    prevStartMs = line.startMs;
+    prevOffsetMs = line.offsetMs;
   }
   if (current.length > 0) paragraphs.push(current.join(" "));
 
@@ -62,15 +57,20 @@ function segmentsToText(
 }
 
 async function fetchTranscriptForVideo(
-  yt: Innertube,
   video: { id: string; title: string }
 ): Promise<TranscriptResult> {
-  const info = await yt.getInfo(video.id);
-  const transcriptInfo = await info.getTranscript();
+  let segments: TranscriptSegment[] = [];
 
-  const segments =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (transcriptInfo as any)?.transcript?.content?.body?.initial_segments ?? [];
+  try {
+    segments = await YoutubeTranscript.fetchTranscript(video.id, { lang: "en" });
+  } catch {
+    // If English not found, try without language preference
+    segments = await YoutubeTranscript.fetchTranscript(video.id);
+  }
+
+  if (!segments?.length) {
+    throw new Error("No transcript segments returned");
+  }
 
   const text = segmentsToText(segments);
   if (!text) throw new Error("Empty transcript after parsing");
@@ -93,14 +93,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No videos provided." }, { status: 400 });
     }
 
-    // Limit to 5 videos to keep token usage manageable
     const targets = videos.slice(0, 5);
 
-    // Create one Innertube session reused for all videos
-    const yt = await Innertube.create({ generate_session_locally: true });
-
     const results = await Promise.allSettled(
-      targets.map((video) => fetchTranscriptForVideo(yt, video))
+      targets.map((video) => fetchTranscriptForVideo(video))
     );
 
     const transcripts: TranscriptResult[] = [];
