@@ -613,7 +613,13 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
       );
 
       if (imported.length === 0) {
-        setTranscriptStatus("No transcripts available — captions may be disabled on these videos.");
+        const failReasons: string[] = (data.failed ?? []).map(
+          (f: { id: string; reason?: string }) => f.reason ?? f
+        );
+        const reasonSummary = failReasons.length > 0
+          ? ` Errors: ${[...new Set(failReasons)].join(" · ")}`
+          : "";
+        setTranscriptStatus(`No transcripts available — captions may be disabled on these videos.${reasonSummary}`);
       } else {
         setPendingScripts((prev) => {
           const existingNames = new Set(prev.map((s) => s.name));
@@ -779,6 +785,12 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
             ~60–120 seconds · If rate-limited, retries automatically — don't close this tab
           </p>
         </div>
+      )}
+
+      {pendingScripts.length === 0 && !transcriptLoading && (
+        <p className="text-xs text-center" style={{ color: "var(--border-light)" }}>
+          No scripts yet? Use <strong>Skip for now →</strong> below — you can add scripts anytime from your profile.
+        </p>
       )}
     </div>
   );
@@ -1098,8 +1110,17 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
               ← Back
             </button>
 
-            {/* Analyze step: no Continue (button inside). All others show Continue. */}
-            {!isAnalyzeStep && (
+            {/* Analyze step: show Skip option. All others show Continue. */}
+            {isAnalyzeStep ? (
+              <button
+                onClick={() => setStep(5)}
+                disabled={analyzeLoading}
+                className="text-sm px-5 py-2 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ color: "var(--muted)", background: "var(--surface-2)", border: "1px solid var(--border)" }}
+              >
+                Skip for now →
+              </button>
+            ) : (
               <button
                 onClick={
                   isExpStep1 ? handleScrapeAndAdvance
