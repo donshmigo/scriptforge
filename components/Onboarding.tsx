@@ -235,7 +235,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ channelUrl: form.channelUrl, apiKey: "" }),
       });
-      let data: Record<string, unknown>;
+      let data: any;
       try {
         data = await res.json();
       } catch {
@@ -304,7 +304,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
           apiKey: "",
         }),
       });
-      let data: Record<string, unknown>;
+      let data: any;
       try { data = await res.json(); } catch { throw new Error("Analysis timed out — please try again."); }
       if (!res.ok) throw new Error((data.error as string) || "Analysis failed.");
 
@@ -597,7 +597,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
           throw new Error("Channel scrape timed out — please try again.");
         }
         if (!scrapeRes.ok) throw new Error(scrapeData.error || "Could not reach channel.");
-        videosToUse = scrapeData.videos ?? [];
+        videosToUse = (scrapeData.videos ?? []) as { id: string; title: string }[];
         if (videosToUse.length > 0) setScrapedVideos(videosToUse);
       }
 
@@ -614,7 +614,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: default
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videos: videosToUse }),
       });
-      let data: { transcripts?: unknown[]; failed?: unknown[]; error?: string };
+      let data: any;
       try {
         data = await res.json();
       } catch {

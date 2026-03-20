@@ -333,9 +333,10 @@ export default function Home() {
       const formData = new FormData();
       Array.from(files).forEach((f) => formData.append("files", f));
       const res = await fetch("/api/parse-doc", { method: "POST", body: formData });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed.");
-      const texts: string[] = data.scripts.map((s: { text: string }) => s.text);
+      let data: any;
+      try { data = await res.json(); } catch { throw new Error("Upload timed out — please try again."); }
+      if (!res.ok) throw new Error((data.error as string) || "Upload failed.");
+      const texts: string[] = (data.scripts as { text: string }[]).map((s) => s.text);
       setReferenceInfo((prev) => (prev ? prev + "\n\n---\n\n" : "") + texts.join("\n\n---\n\n"));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "File upload failed.");

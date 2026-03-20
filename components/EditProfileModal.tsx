@@ -153,7 +153,7 @@ export default function EditProfileModal({
       const formData = new FormData();
       Array.from(files).forEach((f) => formData.append("files", f));
       const res = await fetch("/api/parse-doc", { method: "POST", body: formData });
-      let data: Record<string, unknown>;
+      let data: any;
       try { data = await res.json(); } catch { throw new Error("Upload request timed out — try again."); }
       if (!res.ok) throw new Error((data.error as string) || "Upload failed.");
       const newScripts: SampleScript[] = (data.scripts as { name: string; text: string }[]).map(
@@ -182,11 +182,11 @@ export default function EditProfileModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ channelUrl, apiKey }),
       });
-      let scrapeData: Record<string, unknown>;
+      let scrapeData: any;
       try { scrapeData = await scrapeRes.json(); } catch { throw new Error("Channel request timed out — try again."); }
       if (!scrapeRes.ok) throw new Error((scrapeData.error as string) || "Could not scrape channel.");
 
-      const videos: { id: string; title: string }[] = scrapeData.videos ?? [];
+      const videos = (scrapeData.videos ?? []) as { id: string; title: string }[];
       if (videos.length === 0) {
         setTranscriptStatus("No videos found on this channel.");
         return;
@@ -199,7 +199,7 @@ export default function EditProfileModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videos }),
       });
-      let transcriptData: Record<string, unknown>;
+      let transcriptData: any;
       try { transcriptData = await transcriptRes.json(); } catch { throw new Error("Transcript request timed out — try again."); }
       if (!transcriptRes.ok) throw new Error((transcriptData.error as string) || "Transcript fetch failed.");
 
@@ -242,7 +242,7 @@ export default function EditProfileModal({
           apiKey,
         }),
       });
-      let data: Record<string, unknown>;
+      let data: any;
       try { data = await res.json(); } catch { throw new Error("Analysis request timed out — try again."); }
       if (!res.ok) throw new Error((data.error as string) || "Analysis failed.");
       const newProfile: StyleProfile = {
@@ -299,7 +299,7 @@ export default function EditProfileModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ channelUrl: channelUrl.trim(), apiKey: "" }),
       });
-      let data: Record<string, unknown>;
+      let data: any;
       try { data = await res.json(); } catch { setScrapeStatus("Request timed out — try again."); return; }
       if (!res.ok) {
         setScrapeStatus((data.error as string) || "Could not reach channel. Check the URL and try again.");
@@ -333,7 +333,7 @@ export default function EditProfileModal({
       const formData = new FormData();
       Array.from(files).forEach((f) => formData.append("files", f));
       const res = await fetch("/api/parse-doc", { method: "POST", body: formData });
-      let data: Record<string, unknown>;
+      let data: any;
       try { data = await res.json(); } catch { throw new Error("Upload request timed out — try again."); }
       if (!res.ok) throw new Error((data.error as string) || "Upload failed.");
       const texts: string[] = (data.scripts as { text: string }[]).map((s) => s.text);
@@ -363,7 +363,7 @@ export default function EditProfileModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ guideType, currentContent, feedback, personaId }),
       });
-      let data: Record<string, unknown>;
+      let data: any;
       try { data = await res.json(); } catch { throw new Error("Request timed out — try again."); }
       if (!res.ok) throw new Error((data.error as string) || "Update failed.");
       onSuccess(data.updatedContent);
