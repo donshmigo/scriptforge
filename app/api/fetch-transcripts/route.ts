@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Innertube } from "youtubei.js";
 
-// Node.js runtime — Edge was timing out fetching multiple large HTML pages
 export const maxDuration = 120;
 
 export interface TranscriptResult {
@@ -15,7 +15,20 @@ export interface FetchTranscriptsResponse {
   failed: { id: string; reason: string }[];
 }
 
-const BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+// Module-level cache — reused across warm invocations
+let _yt: Awaited<ReturnType<typeof Innertube.create>> | null = null;
+
+async function getYT() {
+  if (!_yt) {
+    _yt = await Innertube.create({
+      lang: "en",
+      location: "US",
+      generate_session_locally: true,
+      retrieve_player: false,
+    });
+  }
+  return _yt;
+}
 
 function decodeEntities(str: string): string {
   return str
@@ -78,110 +91,40 @@ function linesToText(lines: { offsetMs: number; text: string }[]): string {
   return paragraphs.map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n\n");
 }
 
-interface CaptionTrack { languageCode: string; baseUrl: string; }
-
-// Bracket-balanced JSON array extractor — handles nested objects/arrays
-function extractJsonArray(html: string, key: string): string | null {
-  const idx = html.indexOf(`"${key}":`);
-  if (idx === -1) return null;
-  const start = html.indexOf("[", idx + key.length + 2);
-  if (start === -1) return null;
-  let depth = 0;
-  for (let i = start; i < html.length; i++) {
-    if (html[i] === "[") depth++;
-    else if (html[i] === "]") {
-      depth--;
-      if (depth === 0) return html.slice(start, i + 1);
-    }
-  }
-  return null;
-}
-
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function getCaptionTracks(videoId: string): Promise<CaptionTrack[]> {
-  // Primary: watch page (mimics real browser, less rate-limited than InnerTube API)
-  try {
-    const res = await fetchWithTimeout(
-      `https://www.youtube.com/watch?v=${videoId}&hl=en`,
-      {
-        headers: {
-          "User-Agent": BROWSER_UA,
-          "Accept-Language": "en-US,en;q=0.9",
-          "Cookie": "CONSENT=YES+42; SOCS=CAESEwgDEgk0OTk5OTk5OTkYAxISCgIIABgDIgJlbiIBASoAKAE",
-        },
-      },
-      10000
-    );
-    if (res.ok) {
-      const html = await res.text();
-      const raw = extractJsonArray(html, "captionTracks");
-      if (raw) {
-        const tracks: CaptionTrack[] = JSON.parse(raw);
-        const valid = tracks.filter((t) => t?.baseUrl);
-        if (valid.length > 0) return valid;
-      }
-    }
-  } catch { /* fall through */ }
-
-  // Fallback: InnerTube Android client
-  try {
-    const res = await fetchWithTimeout(
-      "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "com.google.android.youtube/20.10.38 (Linux; U; Android 14)",
-        },
-        body: JSON.stringify({
-          context: { client: { clientName: "ANDROID", clientVersion: "20.10.38" } },
-          videoId,
-        }),
-      },
-      8000
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const tracks: CaptionTrack[] = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-      if (tracks.length > 0) return tracks;
-    }
-  } catch { /* fall through */ }
-
-  return [];
-}
-
 async function fetchTranscriptForVideo(video: { id: string; title: string }): Promise<TranscriptResult> {
-  const tracks = await getCaptionTracks(video.id);
-  if (tracks.length === 0) throw new Error("No captions available");
+  const yt = await getYT();
 
+  // Get video info — this gives us caption track URLs via the player endpoint
+  const info = await yt.getInfo(video.id);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawTracks: any[] = (info as any).captions?.caption_tracks ?? [];
+
+  if (rawTracks.length === 0) throw new Error("No captions available");
+
+  // Prefer English, fall back to first available
   const track =
-    tracks.find((t) => t.languageCode === "en") ??
-    tracks.find((t) => t.languageCode?.startsWith("en")) ??
-    tracks[0];
+    rawTracks.find((t) => t.language_code === "en") ??
+    rawTracks.find((t) => String(t.language_code).startsWith("en")) ??
+    rawTracks[0];
 
-  const sep = track.baseUrl.includes("?") ? "&" : "?";
-  const captionUrl = track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}${sep}fmt=srv3`;
+  const baseUrl: string = track.base_url ?? track.baseUrl ?? "";
+  if (!baseUrl) throw new Error("No caption URL found");
 
-  const capRes = await fetchWithTimeout(captionUrl, { headers: { "User-Agent": BROWSER_UA } }, 8000);
+  const sep = baseUrl.includes("?") ? "&" : "?";
+  const captionUrl = baseUrl.includes("fmt=") ? baseUrl : `${baseUrl}${sep}fmt=srv3`;
+
+  const capRes = await fetch(captionUrl);
   if (!capRes.ok) throw new Error(`Caption fetch ${capRes.status}`);
 
   const xml = await capRes.text();
   if (!xml) throw new Error("Empty caption response");
 
   const lines = parseTimedTextXml(xml);
-  if (lines.length === 0) throw new Error("No lines parsed from caption XML");
+  if (lines.length === 0) throw new Error("Could not parse caption XML");
 
   const text = linesToText(lines);
-  if (!text) throw new Error("Empty transcript after parsing");
+  if (!text) throw new Error("Empty transcript");
 
   return {
     id: video.id,
