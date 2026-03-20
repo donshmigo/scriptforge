@@ -81,6 +81,24 @@ function linesToText(lines: { offsetMs: number; text: string }[]): string {
 
 interface CaptionTrack { languageCode: string; baseUrl: string; }
 
+// Extract a balanced JSON array starting after `"key":[` in a string.
+// Simple regex like (\[.*?\]) breaks on nested arrays/objects — this doesn't.
+function extractJsonArray(html: string, key: string): string | null {
+  const idx = html.indexOf(`"${key}":`);
+  if (idx === -1) return null;
+  const start = html.indexOf("[", idx + key.length + 2);
+  if (start === -1) return null;
+  let depth = 0;
+  for (let i = start; i < html.length; i++) {
+    if (html[i] === "[") depth++;
+    else if (html[i] === "]") {
+      depth--;
+      if (depth === 0) return html.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
 // Primary method: fetch the watch page HTML and extract captionTracks from the
 // embedded ytInitialPlayerResponse. This mimics real browser behaviour and is
 // much less aggressively rate-limited than InnerTube API POST calls.
@@ -95,12 +113,11 @@ async function getCaptionTracksFromPage(videoId: string): Promise<CaptionTrack[]
   if (!res.ok) throw new Error(`Watch page ${res.status}`);
   const html = await res.text();
 
-  // captionTracks is always followed by audioTracks in the player JSON
-  const match = html.match(/"captionTracks":(\[.*?\]),"audioTracks"/s);
-  if (!match) return [];
+  const raw = extractJsonArray(html, "captionTracks");
+  if (!raw) return [];
 
   try {
-    const tracks: CaptionTrack[] = JSON.parse(match[1]);
+    const tracks: CaptionTrack[] = JSON.parse(raw);
     return tracks.filter((t) => t?.baseUrl);
   } catch {
     return [];
