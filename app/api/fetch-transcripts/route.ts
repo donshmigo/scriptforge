@@ -14,10 +14,8 @@ export interface FetchTranscriptsResponse {
   failed: { id: string; reason: string }[];
 }
 
-const ANDROID_UA = "com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip";
-
-// Base64-encoded protobuf that requests caption/subtitle data in the player response
-const CAPTION_PARAMS = "CgIQBg==";
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
 
 function decodeEntities(str: string): string {
   return str
@@ -31,6 +29,7 @@ function parseXml(xml: string): { offsetMs: number; text: string }[] {
   const lines: { offsetMs: number; text: string }[] = [];
   let m: RegExpExecArray | null;
 
+  // srv3 format: <p t="12345"><s>word</s></p>
   const p = /<p\b[^>]*\bt="(\d+)"[^>]*>([\s\S]*?)<\/p>/g;
   while ((m = p.exec(xml)) !== null) {
     const raw = m[2];
@@ -44,6 +43,7 @@ function parseXml(xml: string): { offsetMs: number; text: string }[] {
   }
   if (lines.length > 0) return lines;
 
+  // srv1 fallback: <text start="12.34">word</text>
   const t = /<text\b[^>]*\bstart="([\d.]+)"[^>]*>([\s\S]*?)<\/text>/g;
   while ((m = t.exec(xml)) !== null) {
     const text = decodeEntities(m[2]).replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
@@ -66,62 +66,45 @@ function toText(lines: { offsetMs: number; text: string }[]): string {
   return paras.map(p => p.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n\n");
 }
 
-async function callPlayerApi(videoId: string, client: "ANDROID" | "TVHTML5"): Promise<{ languageCode: string; baseUrl: string }[]> {
-  const isAndroid = client === "ANDROID";
-  const body = isAndroid
-    ? {
-        context: {
-          client: {
-            clientName: "ANDROID",
-            clientVersion: "20.10.38",
-            androidSdkVersion: 34,
-            hl: "en",
-            gl: "US",
-          },
-        },
-        videoId,
-        params: CAPTION_PARAMS,
-      }
-    : {
-        context: {
-          client: {
-            clientName: "TVHTML5",
-            clientVersion: "7.20230405.08.01",
-            hl: "en",
-            gl: "US",
-          },
-        },
-        videoId,
-        params: CAPTION_PARAMS,
-      };
+// Extract ytInitialPlayerResponse from the watch page HTML using bracket counting
+function extractCaptionTracks(html: string): { languageCode: string; baseUrl: string }[] {
+  const marker = "ytInitialPlayerResponse = ";
+  const idx = html.indexOf(marker);
+  if (idx === -1) return [];
 
-  const res = await fetch(
-    `https://www.youtube.com/youtubei/v1/player?key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM394&prettyPrint=false`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": isAndroid ? ANDROID_UA : "Mozilla/5.0",
-        "X-Youtube-Client-Name": isAndroid ? "3" : "7",
-        "X-Youtube-Client-Version": isAndroid ? "20.10.38" : "7.20230405.08.01",
-      },
-      body: JSON.stringify(body),
+  let depth = 0;
+  let i = idx + marker.length;
+  const start = i;
+  for (; i < html.length; i++) {
+    if (html[i] === "{") depth++;
+    else if (html[i] === "}") {
+      depth--;
+      if (depth === 0) { i++; break; }
     }
-  );
+  }
 
-  if (!res.ok) throw new Error(`Player API ${res.status}`);
-  const data = await res.json();
-  return data?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+  try {
+    const data = JSON.parse(html.slice(start, i));
+    return data?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+  } catch {
+    return [];
+  }
 }
 
 async function fetchTranscript(video: { id: string; title: string }): Promise<TranscriptResult> {
-  // Try Android client first, fall back to TVHTML5 if no captions returned
-  let tracks = await callPlayerApi(video.id, "ANDROID");
+  // Fetch the watch page — same request a real browser makes
+  const watchRes = await fetch(`https://www.youtube.com/watch?v=${video.id}`, {
+    headers: {
+      "User-Agent": BROWSER_UA,
+      "Accept-Language": "en-US,en;q=0.9",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
+  });
 
-  if (tracks.length === 0) {
-    await new Promise(r => setTimeout(r, 300));
-    tracks = await callPlayerApi(video.id, "TVHTML5");
-  }
+  if (!watchRes.ok) throw new Error(`Watch page ${watchRes.status}`);
+
+  const html = await watchRes.text();
+  const tracks = extractCaptionTracks(html);
 
   if (tracks.length === 0) throw new Error("No captions");
 
@@ -131,10 +114,10 @@ async function fetchTranscript(video: { id: string; title: string }): Promise<Tr
     tracks[0];
 
   const sep = track.baseUrl.includes("?") ? "&" : "?";
-  const capUrl = track.baseUrl.includes("fmt=") ? track.baseUrl : `${track.baseUrl}${sep}fmt=srv3`;
+  const capUrl = `${track.baseUrl}${sep}fmt=srv3`;
 
-  const capRes = await fetch(capUrl, { headers: { "User-Agent": ANDROID_UA } });
-  if (!capRes.ok) throw new Error(`Caption ${capRes.status}`);
+  const capRes = await fetch(capUrl, { headers: { "User-Agent": BROWSER_UA } });
+  if (!capRes.ok) throw new Error(`Caption fetch ${capRes.status}`);
 
   const xml = await capRes.text();
   const lines = parseXml(xml);
@@ -151,17 +134,17 @@ export async function POST(req: NextRequest) {
     const { videos } = (await req.json()) as { videos: { id: string; title: string }[] };
     if (!videos?.length) return NextResponse.json({ error: "No videos provided." }, { status: 400 });
 
-    // Only try the first 10 — more than that causes rate limiting
-    const candidates = videos.slice(0, 10);
+    // Try up to 6 videos to collect 3 successes
+    const candidates = videos.slice(0, 6);
     const transcripts: TranscriptResult[] = [];
     const failed: { id: string; reason: string }[] = [];
 
     for (const video of candidates) {
-      if (transcripts.length >= 5) break;
+      if (transcripts.length >= 3) break;
 
-      // Small delay between requests to avoid rate limiting
+      // 1s gap between requests to avoid triggering rate limits
       if (transcripts.length + failed.length > 0) {
-        await new Promise(r => setTimeout(r, 500));
+        await new Promise(r => setTimeout(r, 1000));
       }
 
       try {
