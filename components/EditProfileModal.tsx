@@ -349,7 +349,7 @@ export default function EditProfileModal({
       const extractRes = await fetch("/api/parse-identity-doc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: allText }),
+        body: JSON.stringify({ text: allText, apiKey }),
       });
       let extractData: any;
       try { extractData = await extractRes.json(); } catch { throw new Error("Extraction timed out — try again."); }
