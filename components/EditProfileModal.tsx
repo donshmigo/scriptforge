@@ -82,7 +82,7 @@ export default function EditProfileModal({
   onClose,
 }: EditProfileModalProps) {
   const [tab, setTab] = useState<Tab>("identity");
-  const safeTab: Tab = tab === "style" && personaId !== "thomas" ? "identity" : tab;
+  const safeTab: Tab = tab;
 
   // Identity fields
   const [name, setName] = useState(profile.name);
@@ -450,9 +450,7 @@ export default function EditProfileModal({
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "identity",    label: "Who Am I" },
-    // "My Style" (script analysis) is only relevant for the Thomas persona —
-    // pre-built styles (Best Of, Product Review) have their own built-in style guides.
-    ...(personaId === "thomas" ? [{ id: "style" as Tab, label: "My Style" }] : []),
+    { id: "style",       label: "My Style" },
     { id: "introguide",  label: "Intro Guide" },
     { id: "scriptguide", label: "Script Guide" },
     { id: "apikey",      label: "API Keys" },
