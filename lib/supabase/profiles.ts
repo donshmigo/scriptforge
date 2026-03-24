@@ -9,6 +9,7 @@ const EMPTY_WHO_AM_I: WhoAmI = {
   contraryBelief: "",
   targetPerson: "",
   contentStyle: "talking-head",
+  profileDoc: "",
 };
 
 function rowToProfile(row: Record<string, unknown>): PersonaProfile {

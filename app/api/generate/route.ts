@@ -17,6 +17,7 @@ interface CreatorProfile {
   contraryBelief: string;
   targetPerson: string;
   contentStyle: string;
+  profileDoc?: string;
 }
 
 export interface GenerateRequest {
@@ -152,8 +153,22 @@ ${scriptSamples.map((s, i) => `--- EXAMPLE ${i + 1}: "${s.name}" ---\n${s.sample
     // ── INPUT 2: IDENTITY ─────────────────────────────────────────────────────
     // Thomas persona: use Thomas's Who Am I as the default, with creator profile overriding.
     // All other personas: use ONLY the creator profile. Never bleed Thomas's identity in.
+    const profileDocText = creatorProfile?.profileDoc?.trim();
+
     const identitySection = isThomas
-      ? `════════════════════════════════════════
+      ? profileDocText
+        ? `════════════════════════════════════════
+INPUT 2 — WHO AM I
+All proof points, stories, audience, beliefs. Use ONLY the information in this document. Never invent.
+════════════════════════════════════════
+
+${profileDocText}
+
+ANTI-FABRICATION — CRITICAL:
+- Use ONLY the proof points, results, and stories documented above.
+- Never invent outcomes, statistics, client results, or personal anecdotes not listed here.
+- If a specific figure is needed but not documented, write [ADD DETAIL] — never guess.`
+        : `════════════════════════════════════════
 INPUT 2 — WHO AM I
 All proof points, stories, audience, beliefs. Use ONLY figures and stories from here. Never invent.
 ════════════════════════════════════════
@@ -177,7 +192,20 @@ ${creatorProfile.contraryBelief || "See core beliefs above."}
 
 TARGET AUDIENCE:
 ${creatorProfile.targetPerson || "See target audience above."}` : ""}`
-      : `════════════════════════════════════════
+      : profileDocText
+        ? `════════════════════════════════════════
+INPUT 2 — WHO AM I
+All proof points, stories, audience, beliefs. Use ONLY the information in this document. Never invent.
+════════════════════════════════════════
+
+${profileDocText}
+
+ANTI-FABRICATION — CRITICAL:
+- Use ONLY the proof points, results, and stories documented above.
+- Never default to Thomas Graham's identity, credentials, follower counts, or life story.
+- Never invent outcomes, statistics, client results, or personal anecdotes not listed here.
+- If a specific figure is needed but not documented, write [ADD DETAIL] — never guess.`
+        : `════════════════════════════════════════
 INPUT 2 — WHO AM I
 All proof points, stories, audience, beliefs. Use ONLY the information documented below. Never invent.
 ════════════════════════════════════════

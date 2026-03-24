@@ -21,6 +21,7 @@ export interface CreatorProfile {
   targetPerson: string;
   contentStyle: string;
   completedAt: number;
+  profileDoc?: string;
 }
 
 export type ContentStyle =
@@ -38,6 +39,7 @@ export interface WhoAmI {
   contraryBelief: string;
   targetPerson: string;
   contentStyle: string;
+  profileDoc?: string;
 }
 
 // Full per-persona profile stored in user_persona_profiles table
