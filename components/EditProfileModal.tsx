@@ -102,6 +102,11 @@ export default function EditProfileModal({
   const [analyzeSuccess, setAnalyzeSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Identity doc upload
+  const [identityDocLoading, setIdentityDocLoading] = useState(false);
+  const [identityDocStatus, setIdentityDocStatus] = useState("");
+  const identityDocRef = useRef<HTMLInputElement>(null);
+
   // Channel scrape
   const [scrapeLoading, setScrapeLoading] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState("");
@@ -287,6 +292,45 @@ export default function EditProfileModal({
     if (id.contraryBelief)    setContraryBelief(id.contraryBelief);
     if (id.targetPerson)      setTargetPerson(id.targetPerson);
     if (id.contentStyle)      setContentStyle(id.contentStyle);
+  }, []);
+
+  const handleIdentityDocUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setIdentityDocLoading(true);
+    setIdentityDocStatus("Reading document…");
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((f) => formData.append("files", f));
+      const parseRes = await fetch("/api/parse-doc", { method: "POST", body: formData });
+      let parseData: any;
+      try { parseData = await parseRes.json(); } catch { throw new Error("Upload timed out — try again."); }
+      if (!parseRes.ok) throw new Error((parseData.error as string) || "Upload failed.");
+
+      const allText = (parseData.scripts as { text: string }[]).map((s) => s.text).join("\n\n");
+
+      setIdentityDocStatus("Extracting identity fields…");
+      const extractRes = await fetch("/api/parse-identity-doc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: allText }),
+      });
+      let extractData: any;
+      try { extractData = await extractRes.json(); } catch { throw new Error("Extraction timed out — try again."); }
+      if (!extractRes.ok) throw new Error((extractData.error as string) || "Extraction failed.");
+
+      const id = extractData.identity ?? {};
+      if (id.name) setName(id.name);
+      if (id.credibilityStack) setCredibilityStack(id.credibilityStack);
+      if (id.uniqueMethod) setUniqueMethod(id.uniqueMethod);
+      if (id.contraryBelief) setContraryBelief(id.contraryBelief);
+      if (id.targetPerson) setTargetPerson(id.targetPerson);
+
+      setIdentityDocStatus("✓ Fields pre-filled from document");
+    } catch (e: unknown) {
+      setIdentityDocStatus(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setIdentityDocLoading(false);
+    }
   }, []);
 
   const handleScrapeChannel = useCallback(async () => {
@@ -491,6 +535,38 @@ export default function EditProfileModal({
                   </button>
                 </div>
               )}
+
+              {/* Upload doc to pre-fill */}
+              <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                <div>
+                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
+                    Upload a doc to pre-fill
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                    {identityDocStatus
+                      ? identityDocStatus
+                      : "Upload a .docx or .txt about yourself — AI will extract and fill your identity fields"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => identityDocRef.current?.click()}
+                  disabled={identityDocLoading}
+                  className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0 flex items-center gap-1.5 disabled:opacity-50"
+                  style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)", whiteSpace: "nowrap" }}
+                >
+                  {identityDocLoading
+                    ? <><span className="w-3 h-3 rounded-full border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" />Parsing…</>
+                    : "Upload doc →"}
+                </button>
+                <input
+                  ref={identityDocRef}
+                  type="file"
+                  accept=".docx,.txt,.md"
+                  className="hidden"
+                  onChange={(e) => handleIdentityDocUpload(e.target.files)}
+                />
+              </div>
 
               <Field label="Name or handle">
                 <input
