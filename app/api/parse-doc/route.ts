@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import mammoth from "mammoth";
 
+export const runtime = "nodejs";
+
 export interface ParsedScript {
   name: string;
   text: string;
