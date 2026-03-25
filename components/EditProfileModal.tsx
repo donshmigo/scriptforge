@@ -392,8 +392,23 @@ export default function EditProfileModal({
       if (!res.ok) throw new Error((data.error as string) || "Upload failed.");
       const scripts = data.scripts as { name: string; text: string; wordCount: number }[];
       if (!scripts?.length) throw new Error("No readable content found.");
-      setProfileDoc(scripts.map((s) => s.text).join("\n\n"));
-      setProfileDocName(scripts.map((s) => s.name).join(", "));
+      const fullText = scripts.map((s) => s.text).join("\n\n");
+      const docName = scripts.map((s) => s.name).join(", ");
+      // Set identity doc
+      setProfileDoc(fullText);
+      setProfileDocName(docName);
+      // Also set style profile from the same doc — one upload does both
+      setStyleProfile({
+        scripts: scripts.map((s) => ({
+          name: s.name,
+          preview: s.text.slice(0, 120),
+          sample: s.text.split(/\s+/).slice(0, 500).join(" "),
+          wordCount: s.wordCount,
+        })),
+        analysis: fullText,
+        analyzedAt: Date.now(),
+        isDoc: true,
+      });
     } catch (e: unknown) {
       // show inline error — reuse styleError state
       setStyleError(e instanceof Error ? e.message : "Upload failed.");
@@ -932,7 +947,7 @@ export default function EditProfileModal({
                       Current Style Profile
                     </p>
                     <span className="text-xs" style={{ color: "var(--muted)" }}>
-                      {styleProfile.scripts.length} scripts · {timeAgo(styleProfile.analyzedAt)}
+                      {styleProfile.isDoc ? "From document" : `${styleProfile.scripts.length} scripts`} · {timeAgo(styleProfile.analyzedAt)}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
@@ -960,7 +975,7 @@ export default function EditProfileModal({
                       </div>
                     ))}
                   </div>
-                  {styleProfile.scripts.length > 0 && (
+                  {styleProfile.scripts.length > 0 && !styleProfile.isDoc && (
                     <p className="text-xs" style={{ color: "var(--muted)" }}>
                       Remove scripts then re-analyze to update your style DNA.
                     </p>
@@ -968,37 +983,9 @@ export default function EditProfileModal({
                 </div>
               )}
 
-              {/* Option 1: upload a pre-written style document */}
-              <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                <div>
-                  <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Upload a style document</p>
-                  <p className="text-xs mt-0.5 leading-5" style={{ color: "var(--muted)" }}>
-                    Already have a written style guide? Upload it directly — no analysis needed. It loads instantly as your style profile.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => styleDocRef.current?.click()}
-                  disabled={styleDocLoading}
-                  className="w-full rounded-lg py-2.5 text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
-                >
-                  {styleDocLoading
-                    ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" />Loading…</>
-                    : "Upload style doc →"}
-                </button>
-                <input ref={styleDocRef} type="file" multiple accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleStyleDocUpload(e.target.files)} />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-                <span className="text-xs" style={{ color: "var(--muted)" }}>or analyze scripts</span>
-                <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-              </div>
-
               <div>
                 <p className="text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
-                  {styleProfile ? "Replace with new scripts" : "Upload scripts to analyze"}
+                  {styleProfile?.isDoc ? "Style set from your document (Who Am I tab)" : styleProfile ? "Replace with new scripts" : "Upload scripts to analyze"}
                 </p>
                 <p className="text-xs leading-5 mb-4" style={{ color: "var(--muted)" }}>
                   Upload your own scripts and the AI will extract your vocabulary, sentence rhythm, hook formulas, transitions, and structural patterns.
