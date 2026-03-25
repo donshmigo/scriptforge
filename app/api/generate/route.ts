@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 export const maxDuration = 300; // Vercel Pro: up to 300s for long AI generation
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import { THOMAS_WHO_AM_I } from "@/lib/thomas-guides";
 import { getWritingStyle } from "@/lib/personas";
 import { getHooksForReelType } from "@/lib/viral-hooks";
 import { withRetry } from "@/lib/openai-retry";
@@ -127,9 +126,8 @@ export async function POST(req: NextRequest) {
     const persona = getWritingStyle(personaId);
 
     // ── INPUT 1: STYLE ────────────────────────────────────────────────────────
-    // For the Thomas persona, forensic style analysis + script samples override the built-in guide.
-    // For all other pre-built personas, those fields are irrelevant — use only the built-in guide.
-    const isThomas = personaId === "thomas";
+    // Style analysis and script samples apply for ALL creators — not just Thomas.
+    // If the user has analyzed their own scripts or uploaded a style guide, it overlays the base framework.
 
     const styleSection = `════════════════════════════════════════
 INPUT 1 — STYLE GUIDE  [Writing Style: ${persona.name}]
@@ -138,26 +136,24 @@ Language, tone, word choice, sentence structure. This governs ALL writing decisi
 
 ${persona.styleGuide}
 
-${isThomas && styleAnalysis?.trim() ? `---
+${styleAnalysis?.trim() ? `---
 
-FORENSIC STYLE ANALYSIS (extracted from this creator's actual published scripts — apply on top of the Style Guide above):
+CREATOR'S FORENSIC STYLE ANALYSIS (extracted from this creator's actual scripts/voice — mirror this style precisely on top of the framework above):
 
 ${styleAnalysis}` : ""}
 
-${isThomas && scriptSamples.length > 0 ? `---
+${scriptSamples.length > 0 ? `---
 
-REAL SCRIPT EXAMPLES — pattern-match every sentence against these:
+REAL SCRIPT EXAMPLES from this creator — pattern-match vocabulary, rhythm, and structure against these:
 
 ${scriptSamples.map((s, i) => `--- EXAMPLE ${i + 1}: "${s.name}" ---\n${s.sample}`).join("\n\n")}` : ""}`;
 
     // ── INPUT 2: IDENTITY ─────────────────────────────────────────────────────
-    // Thomas persona: use Thomas's Who Am I as the default, with creator profile overriding.
-    // All other personas: use ONLY the creator profile. Never bleed Thomas's identity in.
+    // Every creator uses their own identity — either a profileDoc (raw document) or structured fields.
     const profileDocText = creatorProfile?.profileDoc?.trim();
 
-    const identitySection = isThomas
-      ? profileDocText
-        ? `════════════════════════════════════════
+    const identitySection = profileDocText
+      ? `════════════════════════════════════════
 INPUT 2 — WHO AM I
 All proof points, stories, audience, beliefs. Use ONLY the information in this document. Never invent.
 ════════════════════════════════════════
@@ -168,68 +164,28 @@ ANTI-FABRICATION — CRITICAL:
 - Use ONLY the proof points, results, and stories documented above.
 - Never invent outcomes, statistics, client results, or personal anecdotes not listed here.
 - If a specific figure is needed but not documented, write [ADD DETAIL] — never guess.`
-        : `════════════════════════════════════════
-INPUT 2 — WHO AM I
-All proof points, stories, audience, beliefs. Use ONLY figures and stories from here. Never invent.
-════════════════════════════════════════
-
-${THOMAS_WHO_AM_I}
-
-${creatorProfile ? `---
-
-CREATOR PROFILE (use these specific details — they override/supplement the defaults above):
-
-NAME: ${creatorProfile.name || "Thomas Graham"}
-
-CREDIBILITY STACK (use these exact proof points when establishing authority):
-${creatorProfile.credibilityStack || "See proof points above."}
-
-UNIQUE METHOD (when explaining HOW to achieve something, use this specific approach — not generic advice):
-${creatorProfile.uniqueMethod || "See unique method above."}
-
-CONTRARIAN ANGLE (this belief shapes the video's positioning):
-${creatorProfile.contraryBelief || "See core beliefs above."}
-
-TARGET AUDIENCE:
-${creatorProfile.targetPerson || "See target audience above."}` : ""}`
-      : profileDocText
-        ? `════════════════════════════════════════
-INPUT 2 — WHO AM I
-All proof points, stories, audience, beliefs. Use ONLY the information in this document. Never invent.
-════════════════════════════════════════
-
-${profileDocText}
-
-ANTI-FABRICATION — CRITICAL:
-- Use ONLY the proof points, results, and stories documented above.
-- Never default to Thomas Graham's identity, credentials, follower counts, or life story.
-- Never invent outcomes, statistics, client results, or personal anecdotes not listed here.
-- If a specific figure is needed but not documented, write [ADD DETAIL] — never guess.`
-        : `════════════════════════════════════════
+      : `════════════════════════════════════════
 INPUT 2 — WHO AM I
 All proof points, stories, audience, beliefs. Use ONLY the information documented below. Never invent.
 ════════════════════════════════════════
 
-CREATOR PROFILE:
-
-NAME: ${creatorProfile?.name || "[Name not set — add in Fixed Inputs → Who Am I]"}
+NAME: ${creatorProfile?.name || "[Name not set — add in Who Am I settings]"}
 
 CREDIBILITY STACK — use these exact proof points when establishing authority:
-${creatorProfile?.credibilityStack || "[Not set — add in Fixed Inputs → Who Am I]"}
+${creatorProfile?.credibilityStack || "[Not set — add in Who Am I settings]"}
 
 UNIQUE METHOD — when explaining HOW to achieve something, use this specific approach:
-${creatorProfile?.uniqueMethod || "[Not set — add in Fixed Inputs → Who Am I]"}
+${creatorProfile?.uniqueMethod || "[Not set — add in Who Am I settings]"}
 
 CONTRARIAN ANGLE — this belief shapes the video's positioning:
-${creatorProfile?.contraryBelief || "[Not set — add in Fixed Inputs → Who Am I]"}
+${creatorProfile?.contraryBelief || "[Not set — add in Who Am I settings]"}
 
 TARGET AUDIENCE:
-${creatorProfile?.targetPerson || "[Not set — add in Fixed Inputs → Who Am I]"}
+${creatorProfile?.targetPerson || "[Not set — add in Who Am I settings]"}
 
 ANTI-FABRICATION — CRITICAL:
 - Use ONLY the proof points, results, and stories documented above.
-- Never default to Thomas Graham's identity, credentials, follower counts, or life story.
-- Never invent outcomes, statistics, client results, or personal anecdotes not listed here.
+- Never invent outcomes, statistics, client results, or personal anecdotes not documented here.
 - If a specific figure is needed but not documented above, write [ADD DETAIL] — never guess.`;
 
     // ── INPUTS 3 & 4 / 5: GUIDES (platform-aware) ────────────────────────────
