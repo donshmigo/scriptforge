@@ -54,6 +54,7 @@ function whoAmIToCreatorProfile(w: WhoAmI): CreatorProfile {
     targetPerson: w.targetPerson,
     contentStyle: w.contentStyle,
     completedAt: Date.now(),
+    profileDoc: w.profileDoc ?? "",
   };
 }
 
@@ -66,6 +67,7 @@ function creatorProfileToWhoAmI(p: CreatorProfile): WhoAmI {
     contraryBelief: p.contraryBelief,
     targetPerson: p.targetPerson,
     contentStyle: p.contentStyle,
+    profileDoc: p.profileDoc ?? "",
   };
 }
 
