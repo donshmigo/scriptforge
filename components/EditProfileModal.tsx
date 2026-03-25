@@ -20,7 +20,7 @@ interface EditProfileModalProps {
   onClose: () => void;
 }
 
-type Tab = "identity" | "style" | "introguide" | "scriptguide" | "apikey";
+type Tab = "identity" | "style" | "introguide" | "scriptguide";
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -95,6 +95,9 @@ export default function EditProfileModal({
 
   // Style profile
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(initialStyle);
+  const [styleMode, setStyleMode] = useState<"scripts" | "document">(
+    initialStyle?.isDoc ? "document" : "scripts"
+  );
   const [pendingScripts, setPendingScripts] = useState<SampleScript[]>([]);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [analyzeLoading, setAnalyzeLoading] = useState(false);
@@ -104,11 +107,6 @@ export default function EditProfileModal({
   const styleDocRef = useRef<HTMLInputElement>(null);
   const [styleDocLoading, setStyleDocLoading] = useState(false);
 
-  // Identity doc upload
-  const [identityDocLoading, setIdentityDocLoading] = useState(false);
-  const [identityDocStatus, setIdentityDocStatus] = useState("");
-  const identityDocRef = useRef<HTMLInputElement>(null);
-
   // Channel scrape
   const [scrapeLoading, setScrapeLoading] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState("");
@@ -117,11 +115,9 @@ export default function EditProfileModal({
   const [transcriptLoading, setTranscriptLoading] = useState(false);
   const [transcriptStatus, setTranscriptStatus] = useState("");
 
-  // API key
-  const [apiKey, setApiKey] = useState(initialKey);
-  const [apiKeyVisible, setApiKeyVisible] = useState(false);
-  const [anthropicApiKey, setAnthropicApiKey] = useState(initialAnthropicKey);
-  const [anthropicKeyVisible, setAnthropicKeyVisible] = useState(false);
+  // API keys — not shown in UI, passed through unchanged
+  const apiKey = initialKey;
+  const anthropicApiKey = initialAnthropicKey;
 
   // Guide documents
   const [introGuide, setIntroGuide] = useState(initialIntroGuide);
@@ -341,46 +337,7 @@ export default function EditProfileModal({
     if (id.contentStyle)      setContentStyle(id.contentStyle);
   }, []);
 
-  const handleIdentityDocUpload = useCallback(async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setIdentityDocLoading(true);
-    setIdentityDocStatus("Reading document…");
-    try {
-      const formData = new FormData();
-      Array.from(files).forEach((f) => formData.append("files", f));
-      const parseRes = await fetch("/api/parse-doc", { method: "POST", body: formData });
-      let parseData: any;
-      try { parseData = await parseRes.json(); } catch { throw new Error("Upload timed out — try again."); }
-      if (!parseRes.ok) throw new Error((parseData.error as string) || "Upload failed.");
-
-      const allText = (parseData.scripts as { text: string }[]).map((s) => s.text).join("\n\n");
-
-      setIdentityDocStatus("Extracting identity fields…");
-      const extractRes = await fetch("/api/parse-identity-doc", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: allText, apiKey }),
-      });
-      let extractData: any;
-      try { extractData = await extractRes.json(); } catch { throw new Error("Extraction timed out — try again."); }
-      if (!extractRes.ok) throw new Error((extractData.error as string) || "Extraction failed.");
-
-      const id = extractData.identity ?? {};
-      if (id.name) setName(id.name);
-      if (id.credibilityStack) setCredibilityStack(id.credibilityStack);
-      if (id.uniqueMethod) setUniqueMethod(id.uniqueMethod);
-      if (id.contraryBelief) setContraryBelief(id.contraryBelief);
-      if (id.targetPerson) setTargetPerson(id.targetPerson);
-
-      setIdentityDocStatus("✓ Fields pre-filled from document");
-    } catch (e: unknown) {
-      setIdentityDocStatus(e instanceof Error ? e.message : "Upload failed.");
-    } finally {
-      setIdentityDocLoading(false);
-    }
-  }, []);
-
-  const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
+const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setProfileDocLoading(true);
     try {
@@ -394,23 +351,9 @@ export default function EditProfileModal({
       if (!scripts?.length) throw new Error("No readable content found.");
       const fullText = scripts.map((s) => s.text).join("\n\n");
       const docName = scripts.map((s) => s.name).join(", ");
-      // Set identity doc
       setProfileDoc(fullText);
       setProfileDocName(docName);
-      // Also set style profile from the same doc — one upload does both
-      setStyleProfile({
-        scripts: scripts.map((s) => ({
-          name: s.name,
-          preview: s.text.slice(0, 120),
-          sample: s.text.split(/\s+/).slice(0, 500).join(" "),
-          wordCount: s.wordCount,
-        })),
-        analysis: fullText,
-        analyzedAt: Date.now(),
-        isDoc: true,
-      });
     } catch (e: unknown) {
-      // show inline error — reuse styleError state
       setStyleError(e instanceof Error ? e.message : "Upload failed.");
     } finally {
       setProfileDocLoading(false);
@@ -538,7 +481,6 @@ export default function EditProfileModal({
     { id: "style",       label: "My Style" },
     { id: "introguide",  label: "Intro Guide" },
     { id: "scriptguide", label: "Script Guide" },
-    { id: "apikey",      label: "API Keys" },
   ];
 
   const contentStyles = [
@@ -738,38 +680,6 @@ export default function EditProfileModal({
                     </div>
                   )}
 
-                  {/* Upload doc to pre-fill fields */}
-                  <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                    <div>
-                      <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
-                        Upload a doc to pre-fill
-                      </p>
-                      <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                        {identityDocStatus
-                          ? identityDocStatus
-                          : "Upload a .docx or .txt — AI extracts and fills your fields automatically"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => identityDocRef.current?.click()}
-                      disabled={identityDocLoading}
-                      className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0 flex items-center gap-1.5 disabled:opacity-50"
-                      style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)", whiteSpace: "nowrap" }}
-                    >
-                      {identityDocLoading
-                        ? <><span className="w-3 h-3 rounded-full border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" />Parsing…</>
-                        : "Upload doc →"}
-                    </button>
-                    <input
-                      ref={identityDocRef}
-                      type="file"
-                      accept=".docx,.txt,.md"
-                      className="hidden"
-                      onChange={(e) => handleIdentityDocUpload(e.target.files)}
-                    />
-                  </div>
-
                   <Field label="Name or handle">
                     <input
                       type="text"
@@ -939,139 +849,231 @@ export default function EditProfileModal({
 
           {safeTab === "style" && (
             <div className="flex flex-col gap-5">
-              {/* Current profile status */}
-              {styleProfile && (
-                <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
-                      Current Style Profile
+
+              {/* Mode toggle */}
+              <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: "var(--border)" }}>
+                <button
+                  type="button"
+                  onClick={() => setStyleMode("scripts")}
+                  className="flex-1 py-2.5 text-xs font-semibold transition-colors"
+                  style={{
+                    background: styleMode === "scripts" ? "var(--accent)" : "var(--surface-2)",
+                    color: styleMode === "scripts" ? "#fff" : "var(--muted)",
+                  }}
+                >
+                  Analyze scripts
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStyleMode("document")}
+                  className="flex-1 py-2.5 text-xs font-semibold transition-colors"
+                  style={{
+                    background: styleMode === "document" ? "var(--accent)" : "var(--surface-2)",
+                    color: styleMode === "document" ? "#fff" : "var(--muted)",
+                  }}
+                >
+                  Upload style guide
+                </button>
+              </div>
+
+              {styleMode === "document" ? (
+                /* ── STYLE GUIDE DOCUMENT MODE ── */
+                <div className="flex flex-col gap-4">
+                  <div className="rounded-xl p-4 flex flex-col gap-2" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                    <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>How it works</p>
+                    <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>
+                      Upload your own style guide document. The AI will use it directly to match your writing style — no script analysis needed.
                     </p>
-                    <span className="text-xs" style={{ color: "var(--muted)" }}>
-                      {styleProfile.isDoc ? "From document" : `${styleProfile.scripts.length} scripts`} · {timeAgo(styleProfile.analyzedAt)}
-                    </span>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    {styleProfile.scripts.map((s, i) => (
-                      <div key={i} className="flex items-center gap-2 group">
-                        <span className="text-xs flex-shrink-0" style={{ color: "var(--green)" }}>✓</span>
-                        <span className="text-xs truncate flex-1" style={{ color: "var(--muted)" }}>{s.name}</span>
-                        <span className="text-xs flex-shrink-0" style={{ color: "var(--border-light)" }}>{s.wordCount.toLocaleString()}w</span>
+
+                  {styleProfile?.isDoc ? (
+                    <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(92,252,160,0.06)", border: "1px solid rgba(92,252,160,0.2)" }}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-col gap-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm" style={{ color: "var(--green)" }}>✓</span>
+                            <p className="text-xs font-semibold truncate" style={{ color: "var(--foreground)" }}>
+                              {styleProfile.scripts[0]?.name ?? "Style guide loaded"}
+                            </p>
+                          </div>
+                          <p className="text-xs" style={{ color: "var(--muted)" }}>
+                            {styleProfile.scripts.reduce((a, s) => a + s.wordCount, 0).toLocaleString()} words · {timeAgo(styleProfile.analyzedAt)}
+                          </p>
+                        </div>
                         <button
                           type="button"
-                          title="Remove script"
-                          onClick={() => {
-                            const updated = styleProfile.scripts.filter((_, j) => j !== i);
-                            if (updated.length === 0) {
-                              setStyleProfile(null);
-                            } else {
-                              setStyleProfile({ ...styleProfile, scripts: updated });
-                            }
-                          }}
-                          className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ background: "rgba(252,92,124,0.12)", color: "var(--red)" }}
+                          onClick={() => setStyleProfile(null)}
+                          className="flex-shrink-0 text-xs px-2.5 py-1 rounded-lg"
+                          style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
                         >
-                          ×
+                          Remove
                         </button>
                       </div>
-                    ))}
-                  </div>
-                  {styleProfile.scripts.length > 0 && !styleProfile.isDoc && (
-                    <p className="text-xs" style={{ color: "var(--muted)" }}>
-                      Remove scripts then re-analyze to update your style DNA.
+                      <button
+                        type="button"
+                        onClick={() => styleDocRef.current?.click()}
+                        disabled={styleDocLoading}
+                        className="w-full rounded-lg py-2 text-xs font-medium disabled:opacity-50"
+                        style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)" }}
+                      >
+                        {styleDocLoading ? "Uploading…" : "Replace document"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => styleDocRef.current?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => { e.preventDefault(); handleStyleDocUpload(e.dataTransfer.files); }}
+                      className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-12 gap-3 cursor-pointer"
+                      style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
+                    >
+                      {styleDocLoading ? (
+                        <span className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                      ) : (
+                        <>
+                          <span className="text-3xl">📝</span>
+                          <div className="text-center">
+                            <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Drop your style guide here</p>
+                            <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Writing guide, tone doc, style reference · .docx or .txt</p>
+                          </div>
+                          <span
+                            className="text-xs font-medium px-3 py-1.5 rounded-lg"
+                            style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                          >
+                            Browse files
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <input ref={styleDocRef} type="file" accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleStyleDocUpload(e.target.files)} />
+
+                  {styleError && (
+                    <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
+                      {styleError}
                     </p>
                   )}
                 </div>
-              )}
-
-              <div>
-                <p className="text-sm font-medium mb-1" style={{ color: "var(--foreground)" }}>
-                  {styleProfile?.isDoc ? "Style set from your document (Who Am I tab)" : styleProfile ? "Replace with new scripts" : "Upload scripts to analyze"}
-                </p>
-                <p className="text-xs leading-5 mb-4" style={{ color: "var(--muted)" }}>
-                  Upload your own scripts and the AI will extract your vocabulary, sentence rhythm, hook formulas, transitions, and structural patterns.
-                </p>
-
-                {/* YouTube import button — shown if channel URL is set */}
-                {channelUrl.trim() && (
-                  <div className="mb-3">
-                    <button
-                      onClick={handleImportTranscripts}
-                      disabled={transcriptLoading || analyzeLoading}
-                      className="w-full rounded-xl py-3 text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ background: "rgba(255,0,0,0.08)", color: "#ff4444", border: "1px solid rgba(255,80,80,0.25)" }}
-                    >
-                      {transcriptLoading
-                        ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-red-400/30 border-t-red-400 animate-spin" />{transcriptStatus}</>
-                        : "▶ Import transcripts from YouTube channel"}
-                    </button>
-                    {transcriptStatus && !transcriptLoading && (
-                      <p className="text-xs mt-1.5 text-center" style={{ color: "var(--muted)" }}>{transcriptStatus}</p>
-                    )}
-                  </div>
-                )}
-
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => { e.preventDefault(); handleFileUpload(e.dataTransfer.files); }}
-                  className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-8 gap-2 cursor-pointer mb-3"
-                  style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
-                >
-                  {uploadLoading
-                    ? <span className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                    : (
-                      <>
-                        <span className="text-2xl">📂</span>
-                        <p className="text-xs font-medium" style={{ color: "var(--foreground)" }}>Drop files or click to browse</p>
-                        <p className="text-xs" style={{ color: "var(--muted)" }}>.docx or .txt</p>
-                      </>
-                    )}
-                </div>
-                <input ref={fileInputRef} type="file" multiple accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
-
-
-                {pendingScripts.length > 0 && (
-                  <div className="flex flex-col gap-1 mb-4">
-                    <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
-                      {pendingScripts.length} scripts queued
-                    </p>
-                    {pendingScripts.map((s, i) => (
-                      <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "var(--surface-2)" }}>
-                        <span className="text-xs" style={{ color: "var(--accent)" }}>◉</span>
-                        <p className="text-xs flex-1 truncate" style={{ color: "var(--foreground)" }}>{s.name}</p>
-                        <button onClick={() => setPendingScripts((p) => p.filter((_, j) => j !== i))} className="text-xs" style={{ color: "var(--muted)" }}>×</button>
+              ) : (
+                /* ── ANALYZE SCRIPTS MODE ── */
+                <div className="flex flex-col gap-4">
+                  {/* Current analyzed profile */}
+                  {styleProfile && !styleProfile.isDoc && (
+                    <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Current Style Profile</p>
+                        <span className="text-xs" style={{ color: "var(--muted)" }}>
+                          {styleProfile.scripts.length} scripts · {timeAgo(styleProfile.analyzedAt)}
+                        </span>
                       </div>
-                    ))}
+                      <div className="flex flex-col gap-1">
+                        {styleProfile.scripts.map((s, i) => (
+                          <div key={i} className="flex items-center gap-2 group">
+                            <span className="text-xs flex-shrink-0" style={{ color: "var(--green)" }}>✓</span>
+                            <span className="text-xs truncate flex-1" style={{ color: "var(--muted)" }}>{s.name}</span>
+                            <span className="text-xs flex-shrink-0" style={{ color: "var(--border-light)" }}>{s.wordCount.toLocaleString()}w</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = styleProfile.scripts.filter((_, j) => j !== i);
+                                setStyleProfile(updated.length ? { ...styleProfile, scripts: updated } : null);
+                              }}
+                              className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              style={{ background: "rgba(252,92,124,0.12)", color: "var(--red)" }}
+                            >×</button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-xs leading-5 mb-3" style={{ color: "var(--muted)" }}>
+                      Upload your scripts and the AI will extract your vocabulary, sentence rhythm, hook formulas, transitions, and structural patterns.
+                    </p>
+
+                    {/* YouTube import */}
+                    {channelUrl.trim() && (
+                      <div className="mb-3">
+                        <button
+                          onClick={handleImportTranscripts}
+                          disabled={transcriptLoading || analyzeLoading}
+                          className="w-full rounded-xl py-3 text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          style={{ background: "rgba(255,0,0,0.08)", color: "#ff4444", border: "1px solid rgba(255,80,80,0.25)" }}
+                        >
+                          {transcriptLoading
+                            ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-red-400/30 border-t-red-400 animate-spin" />{transcriptStatus}</>
+                            : "▶ Import transcripts from YouTube channel"}
+                        </button>
+                        {transcriptStatus && !transcriptLoading && (
+                          <p className="text-xs mt-1.5 text-center" style={{ color: "var(--muted)" }}>{transcriptStatus}</p>
+                        )}
+                      </div>
+                    )}
+
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => { e.preventDefault(); handleFileUpload(e.dataTransfer.files); }}
+                      className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-8 gap-2 cursor-pointer mb-3"
+                      style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
+                    >
+                      {uploadLoading
+                        ? <span className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                        : (
+                          <>
+                            <span className="text-2xl">📂</span>
+                            <p className="text-xs font-medium" style={{ color: "var(--foreground)" }}>Drop scripts or click to browse</p>
+                            <p className="text-xs" style={{ color: "var(--muted)" }}>.docx or .txt</p>
+                          </>
+                        )}
+                    </div>
+                    <input ref={fileInputRef} type="file" multiple accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
+
+                    {pendingScripts.length > 0 && (
+                      <div className="flex flex-col gap-1 mb-2">
+                        <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
+                          {pendingScripts.length} scripts queued
+                        </p>
+                        {pendingScripts.map((s, i) => (
+                          <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "var(--surface-2)" }}>
+                            <span className="text-xs" style={{ color: "var(--accent)" }}>◉</span>
+                            <p className="text-xs flex-1 truncate" style={{ color: "var(--foreground)" }}>{s.name}</p>
+                            <button onClick={() => setPendingScripts((p) => p.filter((_, j) => j !== i))} className="text-xs" style={{ color: "var(--muted)" }}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {styleError && (
-                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
-                  {styleError}
-                </p>
-              )}
+                  {styleError && (
+                    <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
+                      {styleError}
+                    </p>
+                  )}
 
-              {analyzeSuccess && (
-                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(92,252,160,0.08)", color: "var(--green)", border: "1px solid rgba(92,252,160,0.2)" }}>
-                  ✓ Style profile updated from {styleProfile?.scripts.length} scripts
-                </p>
-              )}
+                  {analyzeSuccess && !styleProfile?.isDoc && (
+                    <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(92,252,160,0.08)", color: "var(--green)", border: "1px solid rgba(92,252,160,0.2)" }}>
+                      ✓ Style profile updated from {styleProfile?.scripts.length} scripts
+                    </p>
+                  )}
 
-              <button
-                onClick={handleAnalyze}
-                disabled={analyzeLoading || pendingScripts.length === 0}
-                className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                style={{ background: "var(--accent)", color: "#fff" }}
-              >
-                {analyzeLoading
-                  ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Analyzing…</>
-                  : `✦ Analyze ${pendingScripts.length > 0 ? pendingScripts.length + " " : ""}Scripts`}
-              </button>
-              {analyzeLoading && (
-                <p className="text-xs text-center" style={{ color: "var(--muted)" }}>
-                  Deep forensic analysis running… ~60 seconds
-                </p>
+                  <button
+                    onClick={handleAnalyze}
+                    disabled={analyzeLoading || pendingScripts.length === 0}
+                    className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{ background: "var(--accent)", color: "#fff" }}
+                  >
+                    {analyzeLoading
+                      ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Analyzing…</>
+                      : `✦ Analyze ${pendingScripts.length > 0 ? pendingScripts.length + " " : ""}Scripts`}
+                  </button>
+                  {analyzeLoading && (
+                    <p className="text-xs text-center" style={{ color: "var(--muted)" }}>
+                      Deep forensic analysis running… ~60 seconds
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -1207,81 +1209,6 @@ export default function EditProfileModal({
             );
           })()}
 
-          {safeTab === "apikey" && (
-            <div className="flex flex-col gap-6">
-              {/* Anthropic key — used for script generation */}
-              <div className="flex flex-col gap-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Anthropic API Key</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(99,102,241,0.12)", color: "var(--accent)", border: "1px solid rgba(99,102,241,0.25)" }}>Script generation</span>
-                  </div>
-                  <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>
-                    Powers script generation using Claude — Anthropic's best writing model. Get yours at <span style={{ color: "var(--accent)" }}>console.anthropic.com</span>.
-                  </p>
-                </div>
-                <div className="relative">
-                  <input
-                    type={anthropicKeyVisible ? "text" : "password"}
-                    value={anthropicApiKey}
-                    onChange={(e) => setAnthropicApiKey(e.target.value)}
-                    placeholder="sk-ant-..."
-                    className="w-full rounded-lg px-3 py-2.5 text-sm pr-12 outline-none font-mono"
-                    style={INPUT_STYLE}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setAnthropicKeyVisible((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    {anthropicKeyVisible ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="h-px" style={{ background: "var(--border)" }} />
-
-              {/* OpenAI key — used for analysis */}
-              <div className="flex flex-col gap-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>OpenAI API Key</p>
-                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ background: "rgba(92,252,160,0.08)", color: "var(--green)", border: "1px solid rgba(92,252,160,0.2)" }}>Style analysis</span>
-                  </div>
-                  <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>
-                    Used for channel scraping, transcript analysis, and style DNA extraction. Get yours at <span style={{ color: "var(--accent)" }}>platform.openai.com</span>.
-                  </p>
-                </div>
-                <div className="relative">
-                  <input
-                    type={apiKeyVisible ? "text" : "password"}
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="sk-..."
-                    className="w-full rounded-lg px-3 py-2.5 text-sm pr-12 outline-none font-mono"
-                    style={INPUT_STYLE}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setApiKeyVisible((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs"
-                    style={{ color: "var(--muted)" }}
-                  >
-                    {apiKeyVisible ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-xl px-4 py-3 text-xs leading-5" style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)" }}>
-                🔒 All keys are saved to <code style={{ background: "var(--surface)", padding: "0 3px", borderRadius: 3 }}>localStorage</code> on your device only — never transmitted to any server except their respective APIs.
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}
