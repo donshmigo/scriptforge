@@ -9,6 +9,7 @@ export interface StyleProfile {
   scripts: StoredScript[];
   analysis: string;
   analyzedAt: number;
+  isDoc?: boolean; // true when loaded from a style document, false/undefined when AI-analyzed
 }
 
 export interface CreatorProfile {

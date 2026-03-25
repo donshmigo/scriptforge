@@ -923,13 +923,19 @@ ${bodyHtml}
               {[
                 {
                   label: "My Style",
-                  value: styleProfile ? `${styleProfile.scripts.length} scripts analyzed` : "Not configured",
+                  value: styleProfile
+                    ? styleProfile.isDoc
+                      ? `Style doc · ${styleProfile.scripts[0]?.name ?? "loaded"}`
+                      : `${styleProfile.scripts.length} script${styleProfile.scripts.length !== 1 ? "s" : ""} analyzed`
+                    : "Not configured",
                   ok: !!styleProfile,
                 },
                 {
                   label: "Who Am I",
-                  value: creatorProfile?.name || "Not configured",
-                  ok: !!creatorProfile?.name,
+                  value: creatorProfile?.profileDoc
+                    ? "Profile doc loaded"
+                    : creatorProfile?.name || "Not configured",
+                  ok: !!(creatorProfile?.name || creatorProfile?.profileDoc),
                 },
                 {
                   label: "Intro Guide",

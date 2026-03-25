@@ -211,6 +211,7 @@ export default function EditProfileModal({
         })),
         analysis: scripts.map((s) => s.text).join("\n\n"),
         analyzedAt: Date.now(),
+        isDoc: true,
       };
       setStyleProfile(newProfile);
       setAnalyzeSuccess(true);
