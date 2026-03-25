@@ -91,6 +91,12 @@ export default function EditProfileModal({
 
   // ── Style ──────────────────────────────────────────────────────────────────
   const [styleProfile, setStyleProfile] = useState<StyleProfile | null>(initialStyle);
+  const [styleMode, setStyleMode] = useState<"scripts" | "document">(
+    initialStyle?.isDoc ? "document" : "scripts"
+  );
+  const [styleDocLoading, setStyleDocLoading] = useState(false);
+  const [styleDocError, setStyleDocError] = useState("");
+  const styleDocFileRef = useRef<HTMLInputElement>(null);
   const [pendingScripts, setPendingScripts] = useState<SampleScript[]>([]);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [analyzeLoading, setAnalyzeLoading] = useState(false);
@@ -141,7 +147,27 @@ export default function EditProfileModal({
       const fullText = scripts.map((s) => s.text).join("\n\n");
       setProfileDoc(fullText);
       setProfileDocName(scripts.map((s) => s.name).join(", "));
-      // Same doc sets style profile — one upload does both
+    } catch (e: unknown) {
+      setProfileDocError(e instanceof Error ? e.message : "Upload failed.");
+    } finally {
+      setProfileDocLoading(false);
+    }
+  }, []);
+
+  const handleStyleDocUpload = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setStyleDocLoading(true);
+    setStyleDocError("");
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((f) => formData.append("files", f));
+      const res = await fetch("/api/parse-doc", { method: "POST", body: formData });
+      let data: any;
+      try { data = await res.json(); } catch { throw new Error("Upload timed out — try again."); }
+      if (!res.ok) throw new Error((data.error as string) || "Upload failed.");
+      const scripts = data.scripts as { name: string; text: string; wordCount: number }[];
+      if (!scripts?.length) throw new Error("No readable content found.");
+      const fullText = scripts.map((s) => s.text).join("\n\n");
       setStyleProfile({
         scripts: scripts.map((s) => ({
           name: s.name,
@@ -154,9 +180,9 @@ export default function EditProfileModal({
         isDoc: true,
       });
     } catch (e: unknown) {
-      setProfileDocError(e instanceof Error ? e.message : "Upload failed.");
+      setStyleDocError(e instanceof Error ? e.message : "Upload failed.");
     } finally {
-      setProfileDocLoading(false);
+      setStyleDocLoading(false);
     }
   }, []);
 
@@ -449,12 +475,12 @@ export default function EditProfileModal({
                           <p className="text-xs font-semibold truncate" style={{ color: "var(--foreground)" }}>{profileDocName}</p>
                         </div>
                         <p className="text-xs" style={{ color: "var(--muted)" }}>
-                          {profileDoc.split(/\s+/).filter(Boolean).length.toLocaleString()} words · Used for both identity and style
+                          {profileDoc.split(/\s+/).filter(Boolean).length.toLocaleString()} words · Used for identity
                         </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => { setProfileDoc(""); setProfileDocName(""); setStyleProfile(null); }}
+                        onClick={() => { setProfileDoc(""); setProfileDocName(""); }}
                         className="flex-shrink-0 text-xs px-2.5 py-1 rounded-lg"
                         style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
                       >Remove</button>
@@ -687,110 +713,200 @@ export default function EditProfileModal({
           <section>
             <SectionLabel n={2}>How you write</SectionLabel>
 
-            {/* If doc is loaded, show status */}
-            {profileDoc && (
-              <div className="rounded-xl px-4 py-3 mb-4 flex items-center gap-3" style={{ background: "rgba(92,252,160,0.06)", border: "1px solid rgba(92,252,160,0.2)" }}>
-                <span style={{ color: "var(--green)" }}>✓</span>
-                <div>
-                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Style set from your document</p>
-                  <p className="text-xs" style={{ color: "var(--muted)" }}>Optionally add scripts below for deeper style matching</p>
-                </div>
-              </div>
-            )}
+            {/* Mode toggle */}
+            <div className="flex rounded-xl overflow-hidden border mb-5" style={{ borderColor: "var(--border)" }}>
+              <button
+                type="button"
+                onClick={() => setStyleMode("scripts")}
+                className="flex-1 py-2.5 text-xs font-semibold transition-colors"
+                style={{
+                  background: styleMode === "scripts" ? "var(--accent)" : "var(--surface-2)",
+                  color: styleMode === "scripts" ? "#fff" : "var(--muted)",
+                }}
+              >
+                Upload scripts
+              </button>
+              <button
+                type="button"
+                onClick={() => setStyleMode("document")}
+                className="flex-1 py-2.5 text-xs font-semibold transition-colors"
+                style={{
+                  background: styleMode === "document" ? "var(--accent)" : "var(--surface-2)",
+                  color: styleMode === "document" ? "#fff" : "var(--muted)",
+                }}
+              >
+                Upload style guide
+              </button>
+            </div>
 
-            {/* Current style profile */}
-            {styleProfile && !styleProfile.isDoc && (
-              <div className="rounded-xl p-4 mb-4 flex flex-col gap-2" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Current Style Profile</p>
-                  <span className="text-xs" style={{ color: "var(--muted)" }}>{styleProfile.scripts.length} scripts · {timeAgo(styleProfile.analyzedAt)}</span>
-                </div>
-                {styleProfile.scripts.map((s, i) => (
-                  <div key={i} className="flex items-center gap-2 group">
-                    <span className="text-xs" style={{ color: "var(--green)" }}>✓</span>
-                    <span className="text-xs truncate flex-1" style={{ color: "var(--muted)" }}>{s.name}</span>
-                    <span className="text-xs" style={{ color: "var(--border-light)" }}>{s.wordCount.toLocaleString()}w</span>
-                    <button type="button" onClick={() => {
-                      const updated = styleProfile.scripts.filter((_, j) => j !== i);
-                      setStyleProfile(updated.length ? { ...styleProfile, scripts: updated } : null);
-                    }} className="w-5 h-5 rounded flex items-center justify-center text-xs opacity-0 group-hover:opacity-100" style={{ background: "rgba(252,92,124,0.12)", color: "var(--red)" }}>×</button>
+            {styleMode === "document" ? (
+              /* ── Style document upload ── */
+              <div className="flex flex-col gap-3">
+                <p className="text-xs" style={{ color: "var(--muted)" }}>
+                  Already have a style guide or writing doc? Upload it directly — no analysis needed.
+                </p>
+                {styleProfile?.isDoc ? (
+                  <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(92,252,160,0.06)", border: "1px solid rgba(92,252,160,0.2)" }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span style={{ color: "var(--green)" }}>✓</span>
+                          <p className="text-xs font-semibold truncate" style={{ color: "var(--foreground)" }}>
+                            {styleProfile.scripts[0]?.name ?? "Style guide loaded"}
+                          </p>
+                        </div>
+                        <p className="text-xs" style={{ color: "var(--muted)" }}>
+                          {styleProfile.scripts.reduce((acc, s) => acc + s.wordCount, 0).toLocaleString()} words · {timeAgo(styleProfile.analyzedAt)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setStyleProfile(null)}
+                        className="flex-shrink-0 text-xs px-2.5 py-1 rounded-lg"
+                        style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+                      >Remove</button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => styleDocFileRef.current?.click()}
+                      disabled={styleDocLoading}
+                      className="w-full rounded-lg py-2 text-xs font-medium disabled:opacity-50"
+                      style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)" }}
+                    >
+                      {styleDocLoading ? "Uploading…" : "Replace document"}
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
-
-            {analyzeSuccess && (
-              <p className="text-xs px-3 py-2 rounded-lg mb-4" style={{ background: "rgba(92,252,160,0.08)", color: "var(--green)", border: "1px solid rgba(92,252,160,0.2)" }}>
-                ✓ Style profile updated from {styleProfile?.scripts.length} scripts
-              </p>
-            )}
-
-            {/* YouTube import */}
-            {channelUrl.trim() && (
-              <div className="mb-3">
-                <button
-                  onClick={handleImportTranscripts}
-                  disabled={transcriptLoading || analyzeLoading}
-                  className="w-full rounded-xl py-3 text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-                  style={{ background: "rgba(255,0,0,0.08)", color: "#ff4444", border: "1px solid rgba(255,80,80,0.25)" }}
-                >
-                  {transcriptLoading
-                    ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-red-400/30 border-t-red-400 animate-spin" />{transcriptStatus}</>
-                    : "▶ Import transcripts from YouTube"}
-                </button>
-                {transcriptStatus && !transcriptLoading && (
-                  <p className="text-xs mt-1.5 text-center" style={{ color: transcriptStatus.startsWith("✓") ? "var(--green)" : "var(--muted)" }}>{transcriptStatus}</p>
+                ) : (
+                  <div
+                    onClick={() => styleDocFileRef.current?.click()}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); handleStyleDocUpload(e.dataTransfer.files); }}
+                    className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-12 gap-3 cursor-pointer"
+                    style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
+                  >
+                    {styleDocLoading ? (
+                      <span className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                    ) : (
+                      <>
+                        <span className="text-3xl">📝</span>
+                        <div className="text-center">
+                          <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Drop your style guide here</p>
+                          <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Writing guide, tone doc, style reference · .docx or .txt</p>
+                        </div>
+                        <span className="text-xs font-medium px-3 py-1.5 rounded-lg pointer-events-none" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}>
+                          Browse files
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+                <input ref={styleDocFileRef} type="file" accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleStyleDocUpload(e.target.files)} />
+                {styleDocError && (
+                  <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
+                    {styleDocError}
+                  </p>
                 )}
               </div>
-            )}
+            ) : (
+              /* ── Scripts upload + analyze ── */
+              <div className="flex flex-col gap-3">
+                <p className="text-xs" style={{ color: "var(--muted)" }}>
+                  Upload your scripts and we&apos;ll analyze them to build a style profile.
+                </p>
 
-            {/* Script upload drop zone */}
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => { e.preventDefault(); handleFileUpload(e.dataTransfer.files); }}
-              className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-7 gap-2 cursor-pointer mb-3"
-              style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
-            >
-              {uploadLoading ? <span className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" /> : (
-                <>
-                  <span className="text-2xl">📂</span>
-                  <p className="text-xs font-medium" style={{ color: "var(--foreground)" }}>Drop scripts or click to browse</p>
-                  <p className="text-xs" style={{ color: "var(--muted)" }}>.docx or .txt</p>
-                </>
-              )}
-            </div>
-            <input ref={fileInputRef} type="file" multiple accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
-
-            {pendingScripts.length > 0 && (
-              <div className="flex flex-col gap-1 mb-4">
-                <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>{pendingScripts.length} scripts queued</p>
-                {pendingScripts.map((s, i) => (
-                  <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "var(--surface-2)" }}>
-                    <span className="text-xs" style={{ color: "var(--accent)" }}>◉</span>
-                    <p className="text-xs flex-1 truncate" style={{ color: "var(--foreground)" }}>{s.name}</p>
-                    <button onClick={() => setPendingScripts((p) => p.filter((_, j) => j !== i))} className="text-xs" style={{ color: "var(--muted)" }}>×</button>
+                {/* Current style profile (analyzed) */}
+                {styleProfile && !styleProfile.isDoc && (
+                  <div className="rounded-xl p-4 flex flex-col gap-2" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Current Style Profile</p>
+                      <span className="text-xs" style={{ color: "var(--muted)" }}>{styleProfile.scripts.length} scripts · {timeAgo(styleProfile.analyzedAt)}</span>
+                    </div>
+                    {styleProfile.scripts.map((s, i) => (
+                      <div key={i} className="flex items-center gap-2 group">
+                        <span className="text-xs" style={{ color: "var(--green)" }}>✓</span>
+                        <span className="text-xs truncate flex-1" style={{ color: "var(--muted)" }}>{s.name}</span>
+                        <span className="text-xs" style={{ color: "var(--border-light)" }}>{s.wordCount.toLocaleString()}w</span>
+                        <button type="button" onClick={() => {
+                          const updated = styleProfile.scripts.filter((_, j) => j !== i);
+                          setStyleProfile(updated.length ? { ...styleProfile, scripts: updated } : null);
+                        }} className="w-5 h-5 rounded flex items-center justify-center text-xs opacity-0 group-hover:opacity-100" style={{ background: "rgba(252,92,124,0.12)", color: "var(--red)" }}>×</button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+
+                {analyzeSuccess && (
+                  <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(92,252,160,0.08)", color: "var(--green)", border: "1px solid rgba(92,252,160,0.2)" }}>
+                    ✓ Style profile updated from {styleProfile?.scripts.length} scripts
+                  </p>
+                )}
+
+                {/* YouTube import */}
+                {channelUrl.trim() && (
+                  <button
+                    onClick={handleImportTranscripts}
+                    disabled={transcriptLoading || analyzeLoading}
+                    className="w-full rounded-xl py-3 text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                    style={{ background: "rgba(255,0,0,0.08)", color: "#ff4444", border: "1px solid rgba(255,80,80,0.25)" }}
+                  >
+                    {transcriptLoading
+                      ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-red-400/30 border-t-red-400 animate-spin" />{transcriptStatus}</>
+                      : "▶ Import transcripts from YouTube"}
+                  </button>
+                )}
+                {transcriptStatus && !transcriptLoading && (
+                  <p className="text-xs text-center" style={{ color: transcriptStatus.startsWith("✓") ? "var(--green)" : "var(--muted)" }}>{transcriptStatus}</p>
+                )}
+
+                {/* Script upload drop zone */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); handleFileUpload(e.dataTransfer.files); }}
+                  className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-7 gap-2 cursor-pointer"
+                  style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
+                >
+                  {uploadLoading ? <span className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" /> : (
+                    <>
+                      <span className="text-2xl">📂</span>
+                      <p className="text-xs font-medium" style={{ color: "var(--foreground)" }}>Drop scripts or click to browse</p>
+                      <p className="text-xs" style={{ color: "var(--muted)" }}>.docx or .txt</p>
+                    </>
+                  )}
+                </div>
+                <input ref={fileInputRef} type="file" multiple accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
+
+                {pendingScripts.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>{pendingScripts.length} scripts queued</p>
+                    {pendingScripts.map((s, i) => (
+                      <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "var(--surface-2)" }}>
+                        <span className="text-xs" style={{ color: "var(--accent)" }}>◉</span>
+                        <p className="text-xs flex-1 truncate" style={{ color: "var(--foreground)" }}>{s.name}</p>
+                        <button onClick={() => setPendingScripts((p) => p.filter((_, j) => j !== i))} className="text-xs" style={{ color: "var(--muted)" }}>×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {styleError && (
+                  <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
+                    {styleError}
+                  </p>
+                )}
+
+                <button
+                  onClick={handleAnalyze}
+                  disabled={analyzeLoading || pendingScripts.length === 0}
+                  className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+                  style={{ background: "var(--accent)", color: "#fff" }}
+                >
+                  {analyzeLoading
+                    ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Analyzing… (~60s)</>
+                    : `✦ Analyze ${pendingScripts.length > 0 ? pendingScripts.length + " " : ""}Scripts`}
+                </button>
               </div>
             )}
-
-            {styleError && (
-              <p className="text-xs px-3 py-2 rounded-lg mb-3" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
-                {styleError}
-              </p>
-            )}
-
-            <button
-              onClick={handleAnalyze}
-              disabled={analyzeLoading || pendingScripts.length === 0}
-              className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
-              style={{ background: "var(--accent)", color: "#fff" }}
-            >
-              {analyzeLoading
-                ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Analyzing… (~60s)</>
-                : `✦ Analyze ${pendingScripts.length > 0 ? pendingScripts.length + " " : ""}Scripts`}
-            </button>
           </section>
 
           {/* ── ADVANCED (collapsed) ───────────────────────────────────────── */}
