@@ -147,6 +147,14 @@ export default function EditProfileModal({
   const [profileDocLoading, setProfileDocLoading] = useState(false);
   const profileDocFileRef = useRef<HTMLInputElement>(null);
 
+  // Style tab — editable text
+  const [styleText, setStyleText] = useState(initialStyle?.analysis ?? "");
+  const [styleUploadLoading, setStyleUploadLoading] = useState(false);
+  const styleTextFileRef = useRef<HTMLInputElement>(null);
+  const [styleAiFeedback, setStyleAiFeedback] = useState("");
+  const [styleAiLoading, setStyleAiLoading] = useState(false);
+  const [styleAiError, setStyleAiError] = useState("");
+
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -417,7 +425,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
   }, []);
 
   const handleAiUpdate = useCallback(async (
-    guideType: "introGuide" | "scriptGuide" | "whoAmI",
+    guideType: "introGuide" | "scriptGuide" | "whoAmI" | "whoAmIDoc" | "styleDoc",
     currentContent: unknown,
     feedback: string,
     setLoading: (v: boolean) => void,
@@ -447,6 +455,16 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
   }, [personaId]);
 
   const handleSave = async () => {
+    // Build styleProfile from editable styleText
+    const savedStyleProfile: StyleProfile | null = styleText.trim()
+      ? {
+          scripts: styleProfile?.scripts ?? [],
+          analysis: styleText,
+          analyzedAt: styleProfile?.analyzedAt ?? Date.now(),
+          isDoc: true,
+        }
+      : styleProfile;
+
     const updatedProfile: CreatorProfile = {
       ...profile,
       name,
@@ -465,13 +483,13 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
       const supabase = createClient();
       await upsertPersonaProfile(supabase, userId, personaId, {
         whoAmI: { name, channelUrl, credibilityStack, uniqueMethod, contraryBelief, targetPerson, contentStyle, profileDoc },
-        styleProfile,
+        styleProfile: savedStyleProfile,
         introGuide,
         scriptGuide,
       });
     }
 
-    onSave(updatedProfile, styleProfile, apiKey, anthropicApiKey, introGuide, scriptGuide);
+    onSave(updatedProfile, savedStyleProfile, apiKey, anthropicApiKey, introGuide, scriptGuide);
     setSaved(true);
     setTimeout(() => { setSaved(false); onClose(); }, 800);
   };
@@ -540,541 +558,211 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
           {safeTab === "identity" && (
             <div className="flex flex-col gap-5">
 
-              {/* Mode toggle */}
-              <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: "var(--border)" }}>
-                <button
-                  type="button"
-                  onClick={() => setIdentityMode("manual")}
-                  className="flex-1 py-2.5 text-xs font-semibold transition-colors"
-                  style={{
-                    background: identityMode === "manual" ? "var(--accent)" : "var(--surface-2)",
-                    color: identityMode === "manual" ? "#fff" : "var(--muted)",
-                  }}
-                >
-                  Fill manually
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIdentityMode("document")}
-                  className="flex-1 py-2.5 text-xs font-semibold transition-colors"
-                  style={{
-                    background: identityMode === "document" ? "var(--accent)" : "var(--surface-2)",
-                    color: identityMode === "document" ? "#fff" : "var(--muted)",
-                  }}
-                >
-                  Upload document
-                </button>
-              </div>
-
-              {identityMode === "document" ? (
-                /* ── DOCUMENT MODE ── */
-                <div className="flex flex-col gap-4">
-                  <div className="rounded-xl p-4 flex flex-col gap-2" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                    <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>How it works</p>
-                    <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>
-                      Upload any document about yourself — a brand guide, bio, "who I am" doc, writing style PDF — and the AI uses it directly as your identity context when generating scripts. No fields to fill in.
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Who Am I</p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                      Governs: name, credentials, method, beliefs, audience
                     </p>
                   </div>
-
-                  {profileDoc ? (
-                    <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(92,252,160,0.06)", border: "1px solid rgba(92,252,160,0.2)" }}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm" style={{ color: "var(--green)" }}>✓</span>
-                            <p className="text-xs font-semibold truncate" style={{ color: "var(--foreground)" }}>
-                              {profileDocName || "Document loaded"}
-                            </p>
-                          </div>
-                          <p className="text-xs" style={{ color: "var(--muted)" }}>
-                            {profileDoc.split(/\s+/).filter(Boolean).length.toLocaleString()} words · Active for all script generation
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => { setProfileDoc(""); setProfileDocName(""); }}
-                          className="flex-shrink-0 text-xs px-2.5 py-1 rounded-lg"
-                          style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                      <div
-                        className="rounded-lg p-3 text-xs leading-5 font-mono overflow-y-auto"
-                        style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", maxHeight: 160, whiteSpace: "pre-wrap" }}
-                      >
-                        {profileDoc.slice(0, 600)}{profileDoc.length > 600 ? "…" : ""}
-                      </div>
+                  <div className="flex gap-2 items-center">
+                    {profileDoc && (
                       <button
                         type="button"
-                        onClick={() => profileDocFileRef.current?.click()}
-                        disabled={profileDocLoading}
-                        className="w-full rounded-lg py-2 text-xs font-medium disabled:opacity-50"
+                        onClick={() => { setProfileDoc(""); setProfileDocName(""); }}
+                        className="text-xs px-2.5 py-1 rounded-lg"
                         style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)" }}
                       >
-                        {profileDocLoading ? "Uploading…" : "Replace document"}
+                        Clear
                       </button>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => profileDocFileRef.current?.click()}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => { e.preventDefault(); handleProfileDocUpload(e.dataTransfer.files); }}
-                      className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-12 gap-3 cursor-pointer"
-                      style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
-                    >
-                      {profileDocLoading ? (
-                        <span className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                      ) : (
-                        <>
-                          <span className="text-3xl">📄</span>
-                          <div className="text-center">
-                            <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Drop your document here</p>
-                            <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Brand guide, bio, style doc, "who I am" — anything · .docx or .txt</p>
-                          </div>
-                          <span
-                            className="text-xs font-medium px-3 py-1.5 rounded-lg"
-                            style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
-                          >
-                            Browse files
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <input
-                    ref={profileDocFileRef}
-                    type="file"
-                    accept=".pdf,.docx,.txt,.md"
-                    className="hidden"
-                    onChange={(e) => handleProfileDocUpload(e.target.files)}
-                  />
-                  {styleError && (
-                    <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
-                      {styleError}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                /* ── MANUAL MODE ── */
-                <div className="flex flex-col gap-5">
-                  {/* Load Thomas Graham's identity — only shown for the Thomas persona */}
-                  {personaId === "thomas" && (
-                    <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                      <div>
-                        <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
-                          Load Thomas Graham&apos;s identity
-                        </p>
-                        <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
-                          Pre-fill all fields from the Thomas Graham writing style document
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={loadThomasIdentity}
-                        className="text-xs font-medium px-3 py-1.5 rounded-lg flex-shrink-0"
-                        style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
-                      >
-                        Load →
-                      </button>
-                    </div>
-                  )}
-
-                  <Field label="Name or handle">
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Branden Moio"
-                      className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
-                      style={INPUT_STYLE}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                    />
-                  </Field>
-                  <Field label="Channel URL" hint="Paste your YouTube channel URL and click Fetch to auto-fill your identity fields.">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={channelUrl}
-                        onChange={(e) => { setChannelUrl(e.target.value); setScrapeStatus(""); }}
-                        placeholder="https://youtube.com/@yourhandle"
-                        className="flex-1 rounded-lg px-3 py-2.5 text-sm outline-none min-w-0"
-                        style={INPUT_STYLE}
-                        onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                        onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                        onKeyDown={(e) => e.key === "Enter" && handleScrapeChannel()}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleScrapeChannel}
-                        disabled={scrapeLoading || !channelUrl.trim()}
-                        className="flex-shrink-0 text-xs font-semibold px-3 py-2 rounded-lg flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-                        style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)", whiteSpace: "nowrap" }}
-                      >
-                        {scrapeLoading
-                          ? <><span className="w-3 h-3 rounded-full border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" />Fetching…</>
-                          : "Fetch & Pre-fill →"}
-                      </button>
-                    </div>
-                    {scrapeStatus && (
-                      <p className="text-xs mt-1.5" style={{ color: scrapeStatus.startsWith("✓") ? "var(--green)" : "var(--muted)" }}>
-                        {scrapeStatus}
-                      </p>
-                    )}
-                  </Field>
-                  <Field label="Credibility Stack" hint="Specific results, numbers, proof points the AI draws on to establish your authority.">
-                    <textarea
-                      value={credibilityStack}
-                      onChange={(e) => setCredibilityStack(e.target.value)}
-                      rows={4}
-                      placeholder={"Specific results, numbers, proof points the AI draws on to establish your authority.\n\ne.g. 10 years in the industry. Grew revenue from $0 to $2M. Trained 400+ clients."}
-                      className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
-                      style={INPUT_STYLE}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                    />
-                  </Field>
-                  <Field label="Unique Method / Framework" hint="How you specifically approach your topic — your named system or distinctive sequence.">
-                    <textarea
-                      value={uniqueMethod}
-                      onChange={(e) => setUniqueMethod(e.target.value)}
-                      rows={3}
-                      placeholder={"How you specifically approach your topic — your named system or distinctive sequence.\n\ne.g. The 3-Phase Protocol: fix the habit loop first, then environment, then execution."}
-                      className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
-                      style={INPUT_STYLE}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                    />
-                  </Field>
-                  <Field label="Contrarian Belief" hint="What you believe that most people in your space get wrong — your edge and angle.">
-                    <textarea
-                      value={contraryBelief}
-                      onChange={(e) => setContraryBelief(e.target.value)}
-                      rows={3}
-                      placeholder={"What you believe that most people in your space get wrong — your edge and angle.\n\ne.g. Most people optimise for reach. The real lever is trust. A 500-person audience that trusts you beats 500K who don't."}
-                      className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
-                      style={INPUT_STYLE}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                    />
-                  </Field>
-                  <Field label="Who You're For" hint="One specific person with one specific problem — not a broad category.">
-                    <input
-                      type="text"
-                      value={targetPerson}
-                      onChange={(e) => setTargetPerson(e.target.value)}
-                      placeholder="The specific person this content is made for — their situation, problem, and goal."
-                      className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
-                      style={INPUT_STYLE}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                    />
-                  </Field>
-                  <Field label="Content Style">
-                    <div className="grid grid-cols-2 gap-2 mt-0.5">
-                      {contentStyles.map((cs) => {
-                        const active = contentStyle === cs.id;
-                        return (
-                          <button
-                            key={cs.id}
-                            onClick={() => setContentStyle(cs.id)}
-                            className="rounded-xl px-3 py-2.5 text-left text-xs font-medium flex items-center gap-2 transition-all"
-                            style={{
-                              background: active ? "var(--accent-glow)" : "var(--surface-2)",
-                              color: active ? "var(--accent)" : "var(--muted)",
-                              border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-                            }}
-                          >
-                            <span>{cs.icon}</span>
-                            {cs.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </Field>
-
-                  {/* AI feedback panel */}
-                  <div className="rounded-xl p-4 flex flex-col gap-3 mt-1" style={{ background: "rgba(124,92,252,0.05)", border: "1px solid rgba(124,92,252,0.2)" }}>
-                    <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--accent)" }}>Refine with AI</p>
-                    <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>
-                      Describe what to change and the AI will update your identity fields automatically.
-                    </p>
-                    <textarea
-                      value={identityFeedback}
-                      onChange={(e) => { setIdentityFeedback(e.target.value); setIdentityAiError(""); }}
-                      placeholder={`e.g. "Update my credibility stack — I've now helped 600 clients and hit $3M revenue" or "Change my target person to solo founders aged 28–45"`}
-                      rows={3}
-                      className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
-                      style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-                    />
-                    {identityAiError && (
-                      <p className="text-xs" style={{ color: "var(--red)" }}>{identityAiError}</p>
                     )}
                     <button
                       type="button"
-                      disabled={identityAiLoading || !identityFeedback.trim()}
-                      onClick={() => handleAiUpdate(
-                        "whoAmI",
-                        { name, channelUrl, credibilityStack, uniqueMethod, contraryBelief, targetPerson, contentStyle },
-                        identityFeedback,
-                        setIdentityAiLoading,
-                        setIdentityAiError,
-                        (updated) => {
-                          const u = updated as Record<string, string>;
-                          if (u.name !== undefined) setName(u.name);
-                          if (u.channelUrl !== undefined) setChannelUrl(u.channelUrl);
-                          if (u.credibilityStack !== undefined) setCredibilityStack(u.credibilityStack);
-                          if (u.uniqueMethod !== undefined) setUniqueMethod(u.uniqueMethod);
-                          if (u.contraryBelief !== undefined) setContraryBelief(u.contraryBelief);
-                          if (u.targetPerson !== undefined) setTargetPerson(u.targetPerson);
-                          if (u.contentStyle !== undefined) setContentStyle(u.contentStyle);
-                        },
-                        () => setIdentityFeedback(""),
-                      )}
-                      className="w-full rounded-lg py-2.5 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      style={{ background: "var(--accent)", color: "#fff" }}
+                      onClick={() => profileDocFileRef.current?.click()}
+                      disabled={profileDocLoading}
+                      className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+                      style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
                     >
-                      {identityAiLoading
-                        ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />Updating…</>
-                        : "✦ Update with AI"}
+                      {profileDocLoading ? "Uploading…" : "Upload .pdf / .docx / .txt"}
                     </button>
+                    <input
+                      ref={profileDocFileRef}
+                      type="file"
+                      accept=".pdf,.docx,.txt,.md"
+                      className="hidden"
+                      onChange={(e) => handleGuideFileUpload(e.target.files, setProfileDoc, setProfileDocLoading)}
+                    />
                   </div>
                 </div>
+              </div>
+
+              <textarea
+                value={profileDoc}
+                onChange={(e) => setProfileDoc(e.target.value)}
+                placeholder={"Describe who you are — your credentials, unique approach, contrarian beliefs, and who your content is for.\n\nUpload a document to auto-fill this, or type directly. The AI uses this as your identity context when generating every script."}
+                rows={18}
+                className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-y leading-6 font-mono"
+                style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", minHeight: 300 }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+
+              {profileDoc ? (
+                <div className="flex items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--green)" }} />
+                  {profileDoc.trim().split(/\s+/).filter(Boolean).length.toLocaleString()} words loaded
+                  <span style={{ color: "var(--border-light)" }}>·</span>
+                  <span>AI will use this as your identity for every script</span>
+                </div>
+              ) : (
+                <div className="rounded-xl px-4 py-3 text-xs leading-5" style={{ background: "rgba(124,92,252,0.06)", color: "var(--muted)", border: "1px solid rgba(124,92,252,0.15)" }}>
+                  <strong style={{ color: "var(--accent)" }}>No identity document.</strong> Type directly or upload a file to populate this.
+                </div>
               )}
+
+              {/* AI refine panel */}
+              <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(124,92,252,0.05)", border: "1px solid rgba(124,92,252,0.2)" }}>
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--accent)" }}>Refine with AI</p>
+                <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>
+                  Describe what to change and the AI will update your identity document automatically.
+                </p>
+                <textarea
+                  value={identityFeedback}
+                  onChange={(e) => { setIdentityFeedback(e.target.value); setIdentityAiError(""); }}
+                  placeholder={`e.g. "Update my credentials — I've now helped 600 clients and hit $3M revenue" or "Add a section about my contrarian belief on pricing"`}
+                  rows={3}
+                  className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
+                  style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                />
+                {identityAiError && <p className="text-xs" style={{ color: "var(--red)" }}>{identityAiError}</p>}
+                <button
+                  type="button"
+                  disabled={identityAiLoading || !identityFeedback.trim()}
+                  onClick={() => handleAiUpdate(
+                    "whoAmIDoc",
+                    profileDoc,
+                    identityFeedback,
+                    setIdentityAiLoading,
+                    setIdentityAiError,
+                    (updated) => setProfileDoc(updated as string),
+                    () => setIdentityFeedback(""),
+                  )}
+                  className="w-full rounded-lg py-2.5 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ background: "var(--accent)", color: "#fff" }}
+                >
+                  {identityAiLoading
+                    ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />Updating…</>
+                    : "✦ Update with AI"}
+                </button>
+              </div>
             </div>
           )}
 
           {safeTab === "style" && (
-            <div className="flex flex-col gap-5">
-
-              {/* Mode toggle */}
-              <div className="flex rounded-xl overflow-hidden border" style={{ borderColor: "var(--border)" }}>
-                <button
-                  type="button"
-                  onClick={() => setStyleMode("scripts")}
-                  className="flex-1 py-2.5 text-xs font-semibold transition-colors"
-                  style={{
-                    background: styleMode === "scripts" ? "var(--accent)" : "var(--surface-2)",
-                    color: styleMode === "scripts" ? "#fff" : "var(--muted)",
-                  }}
-                >
-                  Analyze scripts
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStyleMode("document")}
-                  className="flex-1 py-2.5 text-xs font-semibold transition-colors"
-                  style={{
-                    background: styleMode === "document" ? "var(--accent)" : "var(--surface-2)",
-                    color: styleMode === "document" ? "#fff" : "var(--muted)",
-                  }}
-                >
-                  Upload style guide
-                </button>
-              </div>
-
-              {styleMode === "document" ? (
-                /* ── STYLE GUIDE DOCUMENT MODE ── */
-                <div className="flex flex-col gap-4">
-                  <div className="rounded-xl p-4 flex flex-col gap-2" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                    <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>How it works</p>
-                    <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>
-                      Upload your own style guide document. The AI will use it directly to match your writing style — no script analysis needed.
+            <div className="flex flex-col gap-4">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>My Style</p>
+                    <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>
+                      Governs: vocabulary, tone, sentence rhythm, hooks, transitions
                     </p>
                   </div>
-
-                  {styleProfile?.isDoc ? (
-                    <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(92,252,160,0.06)", border: "1px solid rgba(92,252,160,0.2)" }}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm" style={{ color: "var(--green)" }}>✓</span>
-                            <p className="text-xs font-semibold truncate" style={{ color: "var(--foreground)" }}>
-                              {styleProfile.scripts[0]?.name ?? "Style guide loaded"}
-                            </p>
-                          </div>
-                          <p className="text-xs" style={{ color: "var(--muted)" }}>
-                            {styleProfile.scripts.reduce((a, s) => a + s.wordCount, 0).toLocaleString()} words · {timeAgo(styleProfile.analyzedAt)}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setStyleProfile(null)}
-                          className="flex-shrink-0 text-xs px-2.5 py-1 rounded-lg"
-                          style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
-                        >
-                          Remove
-                        </button>
-                      </div>
+                  <div className="flex gap-2 items-center">
+                    {styleText && (
                       <button
                         type="button"
-                        onClick={() => styleDocRef.current?.click()}
-                        disabled={styleDocLoading}
-                        className="w-full rounded-lg py-2 text-xs font-medium disabled:opacity-50"
+                        onClick={() => setStyleText("")}
+                        className="text-xs px-2.5 py-1 rounded-lg"
                         style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)" }}
                       >
-                        {styleDocLoading ? "Uploading…" : "Replace document"}
+                        Clear
                       </button>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => styleDocRef.current?.click()}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => { e.preventDefault(); handleStyleDocUpload(e.dataTransfer.files); }}
-                      className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-12 gap-3 cursor-pointer"
-                      style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => styleTextFileRef.current?.click()}
+                      disabled={styleUploadLoading}
+                      className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+                      style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
                     >
-                      {styleDocLoading ? (
-                        <span className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                      ) : (
-                        <>
-                          <span className="text-3xl">📝</span>
-                          <div className="text-center">
-                            <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Drop your style guide here</p>
-                            <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Writing guide, tone doc, style reference · .docx or .txt</p>
-                          </div>
-                          <span
-                            className="text-xs font-medium px-3 py-1.5 rounded-lg"
-                            style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
-                          >
-                            Browse files
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <input ref={styleDocRef} type="file" accept=".pdf,.docx,.txt,.md" className="hidden" onChange={(e) => handleStyleDocUpload(e.target.files)} />
+                      {styleUploadLoading ? "Uploading…" : "Upload .pdf / .docx / .txt"}
+                    </button>
+                    <input
+                      ref={styleTextFileRef}
+                      type="file"
+                      accept=".pdf,.docx,.txt,.md"
+                      className="hidden"
+                      onChange={(e) => handleGuideFileUpload(e.target.files, setStyleText, setStyleUploadLoading)}
+                    />
+                  </div>
+                </div>
+              </div>
 
-                  {styleError && (
-                    <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
-                      {styleError}
-                    </p>
-                  )}
+              <textarea
+                value={styleText}
+                onChange={(e) => setStyleText(e.target.value)}
+                placeholder={"Describe your writing style — vocabulary, tone, sentence structure, how you open videos, transitions, pacing, rhetorical devices.\n\nUpload a style guide document to auto-fill this, or type directly. The AI mirrors this style in every script it writes for you."}
+                rows={18}
+                className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-y leading-6 font-mono"
+                style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)", minHeight: 300 }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+              />
+
+              {styleText ? (
+                <div className="flex items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--green)" }} />
+                  {styleText.trim().split(/\s+/).filter(Boolean).length.toLocaleString()} words loaded
+                  <span style={{ color: "var(--border-light)" }}>·</span>
+                  <span>AI will mirror this style for every script</span>
                 </div>
               ) : (
-                /* ── ANALYZE SCRIPTS MODE ── */
-                <div className="flex flex-col gap-4">
-                  {/* Current analyzed profile */}
-                  {styleProfile && !styleProfile.isDoc && (
-                    <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Current Style Profile</p>
-                        <span className="text-xs" style={{ color: "var(--muted)" }}>
-                          {styleProfile.scripts.length} scripts · {timeAgo(styleProfile.analyzedAt)}
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        {styleProfile.scripts.map((s, i) => (
-                          <div key={i} className="flex items-center gap-2 group">
-                            <span className="text-xs flex-shrink-0" style={{ color: "var(--green)" }}>✓</span>
-                            <span className="text-xs truncate flex-1" style={{ color: "var(--muted)" }}>{s.name}</span>
-                            <span className="text-xs flex-shrink-0" style={{ color: "var(--border-light)" }}>{s.wordCount.toLocaleString()}w</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const updated = styleProfile.scripts.filter((_, j) => j !== i);
-                                setStyleProfile(updated.length ? { ...styleProfile, scripts: updated } : null);
-                              }}
-                              className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                              style={{ background: "rgba(252,92,124,0.12)", color: "var(--red)" }}
-                            >×</button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <p className="text-xs leading-5 mb-3" style={{ color: "var(--muted)" }}>
-                      Upload your scripts and the AI will extract your vocabulary, sentence rhythm, hook formulas, transitions, and structural patterns.
-                    </p>
-
-                    {/* YouTube import */}
-                    {channelUrl.trim() && (
-                      <div className="mb-3">
-                        <button
-                          onClick={handleImportTranscripts}
-                          disabled={transcriptLoading || analyzeLoading}
-                          className="w-full rounded-xl py-3 text-xs font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          style={{ background: "rgba(255,0,0,0.08)", color: "#ff4444", border: "1px solid rgba(255,80,80,0.25)" }}
-                        >
-                          {transcriptLoading
-                            ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-red-400/30 border-t-red-400 animate-spin" />{transcriptStatus}</>
-                            : "▶ Import transcripts from YouTube channel"}
-                        </button>
-                        {transcriptStatus && !transcriptLoading && (
-                          <p className="text-xs mt-1.5 text-center" style={{ color: "var(--muted)" }}>{transcriptStatus}</p>
-                        )}
-                      </div>
-                    )}
-
-                    <div
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => { e.preventDefault(); handleFileUpload(e.dataTransfer.files); }}
-                      className="rounded-xl border-2 border-dashed flex flex-col items-center justify-center py-8 gap-2 cursor-pointer mb-3"
-                      style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
-                    >
-                      {uploadLoading
-                        ? <span className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                        : (
-                          <>
-                            <span className="text-2xl">📂</span>
-                            <p className="text-xs font-medium" style={{ color: "var(--foreground)" }}>Drop scripts or click to browse</p>
-                            <p className="text-xs" style={{ color: "var(--muted)" }}>.docx or .txt</p>
-                          </>
-                        )}
-                    </div>
-                    <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.txt,.md" className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
-
-                    {pendingScripts.length > 0 && (
-                      <div className="flex flex-col gap-1 mb-2">
-                        <p className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
-                          {pendingScripts.length} scripts queued
-                        </p>
-                        {pendingScripts.map((s, i) => (
-                          <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "var(--surface-2)" }}>
-                            <span className="text-xs" style={{ color: "var(--accent)" }}>◉</span>
-                            <p className="text-xs flex-1 truncate" style={{ color: "var(--foreground)" }}>{s.name}</p>
-                            <button onClick={() => setPendingScripts((p) => p.filter((_, j) => j !== i))} className="text-xs" style={{ color: "var(--muted)" }}>×</button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {styleError && (
-                    <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
-                      {styleError}
-                    </p>
-                  )}
-
-                  {analyzeSuccess && !styleProfile?.isDoc && (
-                    <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(92,252,160,0.08)", color: "var(--green)", border: "1px solid rgba(92,252,160,0.2)" }}>
-                      ✓ Style profile updated from {styleProfile?.scripts.length} scripts
-                    </p>
-                  )}
-
-                  <button
-                    onClick={handleAnalyze}
-                    disabled={analyzeLoading || pendingScripts.length === 0}
-                    className="w-full rounded-xl py-3 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{ background: "var(--accent)", color: "#fff" }}
-                  >
-                    {analyzeLoading
-                      ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Analyzing…</>
-                      : `✦ Analyze ${pendingScripts.length > 0 ? pendingScripts.length + " " : ""}Scripts`}
-                  </button>
-                  {analyzeLoading && (
-                    <p className="text-xs text-center" style={{ color: "var(--muted)" }}>
-                      Deep forensic analysis running… ~60 seconds
-                    </p>
-                  )}
+                <div className="rounded-xl px-4 py-3 text-xs leading-5" style={{ background: "rgba(124,92,252,0.06)", color: "var(--muted)", border: "1px solid rgba(124,92,252,0.15)" }}>
+                  <strong style={{ color: "var(--accent)" }}>No style guide.</strong> Upload a document or type your style notes directly.
                 </div>
               )}
+
+              {/* AI refine panel */}
+              <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(124,92,252,0.05)", border: "1px solid rgba(124,92,252,0.2)" }}>
+                <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--accent)" }}>Refine with AI</p>
+                <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>
+                  Describe what to change and the AI will update your style guide automatically.
+                </p>
+                <textarea
+                  value={styleAiFeedback}
+                  onChange={(e) => { setStyleAiFeedback(e.target.value); setStyleAiError(""); }}
+                  placeholder={`e.g. "Add a rule: always use short punchy sentences in the hook" or "Remove the formal tone notes — I'm actually very casual and conversational"`}
+                  rows={3}
+                  className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
+                  style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                  onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                  onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                />
+                {styleAiError && <p className="text-xs" style={{ color: "var(--red)" }}>{styleAiError}</p>}
+                <button
+                  type="button"
+                  disabled={styleAiLoading || !styleAiFeedback.trim()}
+                  onClick={() => handleAiUpdate(
+                    "styleDoc",
+                    styleText,
+                    styleAiFeedback,
+                    setStyleAiLoading,
+                    setStyleAiError,
+                    (updated) => setStyleText(updated as string),
+                    () => setStyleAiFeedback(""),
+                  )}
+                  className="w-full rounded-lg py-2.5 text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ background: "var(--accent)", color: "#fff" }}
+                >
+                  {styleAiLoading
+                    ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-white/30 border-t-white animate-spin" />Updating…</>
+                    : "✦ Update with AI"}
+                </button>
+              </div>
             </div>
           )}
 
