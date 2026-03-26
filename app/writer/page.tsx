@@ -126,7 +126,7 @@ function renderScript(raw: string): React.ReactNode[] {
           <div key={key++} className="flex items-center gap-2 mt-5 mb-1.5">
             <span
               className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider"
-              style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(124,92,252,0.25)" }}
+              style={{ background: "rgba(255,78,80,0.08)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.25)" }}
             >
               {label}
             </span>
@@ -667,16 +667,16 @@ ${bodyHtml}
       )}
 
       {/* Header */}
-      <header className="border-b sticky top-0 z-10 backdrop-blur-sm" style={{ borderColor: "var(--border)", background: "rgba(15,15,19,0.92)" }}>
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg" style={{ background: "var(--accent)" }}>▶</div>
+      <header className="border-b sticky top-0 z-10 backdrop-blur-md" style={{ borderColor: "var(--border)", background: "rgba(250,249,246,0.94)", boxShadow: "var(--shadow-sm)" }}>
+        <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent) 0%, #FF7B35 100%)", boxShadow: "0 4px 12px rgba(255,78,80,0.35)" }}>✦</div>
             <div>
-              <h1 className="text-lg font-bold leading-none group-hover:opacity-90" style={{ color: "var(--foreground)" }}>ScriptForge</h1>
-              <p className="text-xs" style={{ color: "var(--muted)" }}>YouTube Script Generator</p>
+              <h1 className="text-base font-bold leading-none tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>ScriptForge</h1>
+              <p className="text-xs leading-none mt-0.5" style={{ color: "var(--muted)" }}>Script Generator</p>
             </div>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {script && (
               <button
                 onClick={() => {
@@ -692,22 +692,22 @@ ${bodyHtml}
                   setError("");
                   setReviseError("");
                 }}
-                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+                className="btn-press text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
                 title="Clear and start a new script"
               >
                 <span>↺</span> New Script
               </button>
             )}
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}>
-              <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: styleProfile ? "var(--green)" : "var(--accent)" }} />
-              {creatorProfile?.name || "Creator"}
-              {styleProfile && <span style={{ color: "var(--border-light)" }}>· {styleProfile.scripts.length} scripts</span>}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)", boxShadow: "var(--shadow-sm)" }}>
+              <span className="w-1.5 h-1.5 rounded-full inline-block flex-shrink-0" style={{ background: styleProfile ? "var(--green)" : "var(--accent)" }} />
+              <span className="font-medium" style={{ color: "var(--foreground)" }}>{creatorProfile?.name || "Creator"}</span>
+              {styleProfile && <span>· {styleProfile.scripts.length} scripts</span>}
             </div>
             <button
               onClick={() => setShowEditProfile(true)}
-              className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-              style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+              className="btn-press text-xs font-semibold px-3.5 py-1.5 rounded-lg"
+              style={{ background: "var(--foreground)", color: "#fff", boxShadow: "var(--shadow-sm)" }}
             >
               Edit Profile
             </button>
@@ -719,50 +719,51 @@ ${bodyHtml}
         {/* LEFT: Output */}
         <div className="order-2 xl:order-1">
           {!script && !loading && (
-            <div className="rounded-2xl border flex flex-col items-center justify-center text-center py-24 px-8 sticky top-24" style={{ borderColor: "var(--border)", background: "var(--surface)", minHeight: 500 }}>
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-5" style={{ background: "var(--accent-glow)", border: "1px solid var(--border-light)" }}>✍️</div>
-              <h2 className="text-xl font-semibold mb-2" style={{ color: "var(--foreground)" }}>Your script will appear here</h2>
+            <div className="rounded-2xl border flex flex-col items-center justify-center text-center py-24 px-8 sticky top-24 animate-fade-in-up" style={{ borderColor: "var(--border)", background: "var(--surface)", minHeight: 500, boxShadow: "var(--shadow)" }}>
+              <div className="relative mb-6">
+                <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl" style={{ background: "linear-gradient(135deg, rgba(255,78,80,0.08) 0%, rgba(124,92,252,0.08) 100%)", border: "1px solid rgba(255,78,80,0.15)" }}>✍️</div>
+                <div className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center text-white" style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", boxShadow: "0 3px 8px rgba(255,78,80,0.4)", fontSize: "11px" }}>✦</div>
+              </div>
+              <h2 className="text-xl font-bold mb-2 tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>Your script will appear here</h2>
               <p className="max-w-sm text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
                 Fill in your video details and hit Generate. Every script is written from your identity, positioning, and voice.
               </p>
               {!styleProfile && (
-                <div className="mt-6 px-4 py-3 rounded-xl text-xs leading-5 max-w-sm text-left" style={{ background: "rgba(124,92,252,0.08)", color: "var(--accent)", border: "1px solid rgba(124,92,252,0.2)" }}>
-                  <strong>Tip:</strong> Add your scripts in Edit Profile → Style to unlock authentic voice matching.
+                <div className="mt-6 px-4 py-3 rounded-xl text-xs leading-5 max-w-sm text-left" style={{ background: "rgba(255,78,80,0.06)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.18)" }}>
+                  <strong>Tip:</strong> Add your scripts in Edit Profile → My Style to unlock authentic voice matching.
                 </div>
               )}
             </div>
           )}
           {loading && (
-            <div className="rounded-2xl border flex flex-col items-center justify-center text-center py-24 px-8 sticky top-24" style={{ borderColor: "var(--border)", background: "var(--surface)", minHeight: 500 }}>
-              <div className="flex gap-1.5 mb-6">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="w-2.5 h-2.5 rounded-full animate-bounce" style={{ background: "var(--accent)", animationDelay: `${i * 0.15}s` }} />
-                ))}
+            <div className="rounded-2xl border flex flex-col items-center justify-center text-center py-24 px-8 sticky top-24" style={{ borderColor: "var(--border)", background: "var(--surface)", minHeight: 500, boxShadow: "var(--shadow)" }}>
+              <div className="relative w-16 h-16 mb-7">
+                <div className="absolute inset-0 rounded-full" style={{ background: "conic-gradient(var(--accent), #FF7B35, rgba(255,78,80,0.1), var(--accent))", animation: "spinGradient 1.2s linear infinite" }} />
+                <div className="absolute inset-1.5 rounded-full" style={{ background: "var(--surface)" }} />
+                <div className="absolute inset-0 flex items-center justify-center text-base">✦</div>
               </div>
-              <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Writing in your voice…</p>
-              <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Applying your identity, positioning, and style — 20–40 seconds</p>
+              <p className="text-sm font-bold tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>Crafting your script…</p>
+              <p className="text-xs mt-1.5 max-w-xs" style={{ color: "var(--muted)" }}>Applying your identity, style, and voice — 20–40 seconds</p>
             </div>
           )}
           {script && (
-            <div ref={outputRef} className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+            <div ref={outputRef} className="rounded-2xl border overflow-hidden animate-fade-in-up" style={{ borderColor: "var(--border)", background: "var(--surface)", boxShadow: "var(--shadow)" }}>
               {/* Header */}
               <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{platform === "reels" ? "Reel Script" : "Generated Script"}</span>
-                  <div className="flex items-center gap-3 text-xs" style={{ color: "var(--muted)" }}>
-                    <span><span className="font-medium" style={{ color: "var(--foreground)" }}>{wordCount.toLocaleString()}</span> words</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>{platform === "reels" ? "Reel Script" : "Generated Script"}</span>
+                  <div className="flex items-center gap-2 text-xs px-2.5 py-1 rounded-full" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}>
+                    <span><span className="font-semibold" style={{ color: "var(--foreground)" }}>{wordCount.toLocaleString()}</span> words</span>
                     <span>·</span>
-                    <span>~<span className="font-medium" style={{ color: "var(--foreground)" }}>{estimatedReadTime(wordCount, platform === "reels" ? 150 : 145)}</span> speak time</span>
+                    <span>~<span className="font-semibold" style={{ color: "var(--foreground)" }}>{estimatedReadTime(wordCount, platform === "reels" ? 150 : 145)}</span></span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleDownload}
-                    title="Download as .txt"
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                    style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border-light)" }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = "var(--foreground)"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = "var(--muted)"; }}
+                    title="Download as .html"
+                    className="btn-press flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
+                    style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
                   >
                     <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M6.5 1v7M3.5 5.5l3 3 3-3M2 10h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -771,8 +772,8 @@ ${bodyHtml}
                   </button>
                   <button
                     onClick={handleCopy}
-                    className="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                    style={{ background: copied ? "var(--accent-glow)" : "var(--surface)", color: copied ? "var(--accent)" : "var(--muted)", border: "1px solid var(--border-light)" }}
+                    className="btn-press flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                    style={{ background: copied ? "rgba(0,201,167,0.1)" : "var(--foreground)", color: copied ? "var(--green)" : "#fff", border: copied ? "1px solid rgba(0,201,167,0.3)" : "1px solid var(--foreground)" }}
                   >
                     {copied ? "✓ Copied!" : "Copy"}
                   </button>
@@ -785,7 +786,7 @@ ${bodyHtml}
                   <div className="flex items-center gap-2">
                     <span
                       className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider"
-                      style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(124,92,252,0.25)" }}
+                      style={{ background: "rgba(255,78,80,0.08)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.25)" }}
                     >
                       HOOK
                     </span>
@@ -828,7 +829,7 @@ ${bodyHtml}
 
                 {/* Feedback / Revision */}
                 <div className="mt-8 pt-6 border-t" style={{ borderColor: "var(--border)" }}>
-                  <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: "var(--muted)" }}>Request a revision</p>
+                  <p className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: "var(--muted)", fontFamily: "var(--font-syne)" }}>Request a revision</p>
                   <textarea
                     value={feedbackMessage}
                     onChange={(e) => { setFeedbackMessage(e.target.value); setReviseError(""); }}
@@ -844,8 +845,8 @@ ${bodyHtml}
                   <button
                     onClick={handleRevise}
                     disabled={reviseLoading || !feedbackMessage.trim()}
-                    className="mt-2 w-full rounded-xl py-2.5 text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{ background: "var(--surface-2)", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                    className="btn-press mt-2 w-full rounded-xl py-2.5 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    style={{ background: "var(--foreground)", color: "#fff", border: "1px solid var(--foreground)" }}
                   >
                     {reviseLoading
                       ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-accent/30 border-t-current animate-spin inline-block" />Revising…</>
@@ -863,8 +864,8 @@ ${bodyHtml}
         <div className="order-1 xl:order-2 flex flex-col gap-5">
 
           {/* ── WRITING STYLE SELECTOR ───────────────────────────────────── */}
-          <div className="rounded-2xl border p-5 flex flex-col gap-3" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-            <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>Writing Style</p>
+          <div className="rounded-2xl border p-5 flex flex-col gap-3 animate-fade-in-up delay-0" style={{ borderColor: "var(--border)", background: "var(--surface)", boxShadow: "var(--shadow)" }}>
+            <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--muted)", fontFamily: "var(--font-syne)" }}>Writing Style</p>
             <div className="grid grid-cols-2 gap-2.5">
               {WRITING_STYLES.map((style) => {
                 const active = personaId === style.id;
@@ -873,34 +874,35 @@ ${bodyHtml}
                     key={style.id}
                     onClick={() => style.available && handlePersonaChange(style.id)}
                     disabled={!style.available}
-                    className="relative flex flex-col gap-2 rounded-xl p-3.5 text-left transition-all"
+                    className="relative flex flex-col gap-2 rounded-xl p-3.5 text-left card-lift"
                     style={{
-                      background: active ? "var(--accent-glow)" : "var(--surface-2)",
-                      border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
-                      opacity: style.available ? 1 : 0.45,
+                      background: active ? `${style.color}12` : "var(--surface-2)",
+                      border: `1.5px solid ${active ? style.color : "var(--border)"}`,
+                      opacity: style.available ? 1 : 0.4,
                       cursor: style.available ? "pointer" : "not-allowed",
+                      boxShadow: active ? `0 4px 16px ${style.color}28` : "none",
                     }}
                   >
                     {!style.available && (
-                      <span className="absolute top-2 right-2 text-xs px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", fontSize: "9px" }}>
+                      <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full font-semibold" style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", fontSize: "9px" }}>
                         Soon
                       </span>
                     )}
                     <div className="flex items-center gap-2.5">
                       <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                        style={{ background: active ? style.color : `${style.color}22`, color: active ? "#fff" : style.color }}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
+                        style={{ background: active ? style.color : `${style.color}20`, color: active ? "#fff" : style.color, boxShadow: active ? `0 3px 8px ${style.color}40` : "none" }}
                       >
                         {style.avatar}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold leading-none truncate" style={{ color: "var(--foreground)" }}>
+                        <p className="text-xs font-bold leading-none truncate" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>
                           {style.name}
                         </p>
                         {active ? (
-                          <p className="text-xs mt-0.5 leading-3" style={{ color: "var(--accent)", fontSize: "10px" }}>Active</p>
+                          <p className="text-xs mt-0.5 font-semibold" style={{ color: style.color, fontSize: "10px" }}>● Active</p>
                         ) : (
-                          <p className="text-xs mt-0.5 leading-3" style={{ color: "var(--muted)", fontSize: "10px" }}>{style.contentType}</p>
+                          <p className="text-xs mt-0.5" style={{ color: "var(--muted)", fontSize: "10px" }}>{style.contentType}</p>
                         )}
                       </div>
                     </div>
@@ -914,64 +916,64 @@ ${bodyHtml}
           </div>
 
           {/* ── FIXED INPUTS status bar ───────────────────────────────────── */}
-          <div className="rounded-2xl border px-5 py-4 flex flex-col gap-3" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+          <div className="rounded-2xl border px-5 py-4 flex flex-col gap-3 animate-fade-in-up delay-1" style={{ borderColor: "var(--border)", background: "var(--surface)", boxShadow: "var(--shadow)" }}>
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>Fixed Inputs</p>
-              <button onClick={() => setShowEditProfile(true)} className="text-xs" style={{ color: "var(--accent)" }}>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--muted)", fontFamily: "var(--font-syne)" }}>Your Profile</p>
+              <button onClick={() => setShowEditProfile(true)} className="btn-press text-xs font-semibold px-2.5 py-1 rounded-lg" style={{ background: "var(--surface-2)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.2)" }}>
                 Edit →
               </button>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 {
                   label: "My Style",
                   value: styleProfile
                     ? styleProfile.isDoc
-                      ? `Style doc · ${styleProfile.scripts[0]?.name ?? "loaded"}`
-                      : `${styleProfile.scripts.length} script${styleProfile.scripts.length !== 1 ? "s" : ""} analyzed`
-                    : "Not configured",
+                      ? "Style doc"
+                      : `${styleProfile.scripts.length} scripts`
+                    : "Not set",
                   ok: !!styleProfile,
                 },
                 {
                   label: "Who Am I",
                   value: creatorProfile?.profileDoc
-                    ? "Profile doc loaded"
-                    : creatorProfile?.name || "Not configured",
+                    ? "Doc loaded"
+                    : creatorProfile?.name || "Not set",
                   ok: !!(creatorProfile?.name || creatorProfile?.profileDoc),
                 },
                 {
                   label: "Intro Guide",
-                  value: introGuide ? `${countWords(introGuide).toLocaleString()} words` : "Not uploaded",
+                  value: introGuide ? `${countWords(introGuide).toLocaleString()} words` : "Not set",
                   ok: !!introGuide,
                 },
                 {
                   label: "Script Guide",
-                  value: scriptGuide ? `${countWords(scriptGuide).toLocaleString()} words` : "Not uploaded",
+                  value: scriptGuide ? `${countWords(scriptGuide).toLocaleString()} words` : "Not set",
                   ok: !!scriptGuide,
                 },
               ].map(({ label, value, ok }) => (
-                <div key={label} className="flex items-center gap-3">
-                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ok ? "var(--green)" : "var(--border-light)" }} />
-                  <span className="text-xs w-20 flex-shrink-0" style={{ color: "var(--muted)" }}>{label}</span>
-                  <span className="text-xs leading-5 truncate" style={{ color: ok ? "var(--foreground)" : "var(--border-light)" }}>
-                    {value}
-                  </span>
+                <div key={label} className="flex flex-col gap-1 rounded-xl px-3 py-2.5" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                  <span className="text-xs font-medium" style={{ color: "var(--muted)", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>{label}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ok ? "var(--green)" : "var(--border-light)" }} />
+                    <span className="text-xs font-semibold truncate" style={{ color: ok ? "var(--foreground)" : "var(--muted)" }}>{value}</span>
+                  </div>
                 </div>
               ))}
-              {fixedGuideCount < 2 && (
-                <p className="text-xs mt-1 leading-4" style={{ color: "var(--muted)" }}>
-                  Add your intro & script writing guides in <button onClick={() => setShowEditProfile(true)} className="underline" style={{ color: "var(--accent)" }}>Edit Profile</button> for better results.
-                </p>
-              )}
             </div>
+            {fixedGuideCount < 2 && (
+              <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>
+                Add your guides in <button onClick={() => setShowEditProfile(true)} className="underline font-medium" style={{ color: "var(--accent)" }}>Edit Profile</button> for better scripts.
+              </p>
+            )}
           </div>
 
           {/* ── VARIABLE INPUTS ───────────────────────────────────────────── */}
-          <div className="rounded-2xl border p-5 flex flex-col gap-5" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+          <div className="rounded-2xl border p-5 flex flex-col gap-5 animate-fade-in-up delay-2" style={{ borderColor: "var(--border)", background: "var(--surface)", boxShadow: "var(--shadow)" }}>
 
             {/* Platform toggle */}
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--muted)" }}>Platform</p>
+              <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--muted)", fontFamily: "var(--font-syne)" }}>Platform</p>
               <div className="grid grid-cols-2 gap-2">
                 {([
                   { id: "youtube" as Platform, icon: "▶", label: "YouTube",            sub: "Long-form scripts" },
@@ -982,16 +984,16 @@ ${bodyHtml}
                     <button
                       key={id}
                       onClick={() => setPlatform(id)}
-                      className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-all"
+                      className="btn-press flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left"
                       style={{
-                        background: active ? "var(--accent-glow)" : "var(--surface-2)",
-                        border: `1px solid ${active ? "var(--accent)" : "var(--border)"}`,
+                        background: active ? "var(--foreground)" : "var(--surface-2)",
+                        border: `1.5px solid ${active ? "var(--foreground)" : "var(--border)"}`,
                       }}
                     >
                       <span className="text-base leading-none">{icon}</span>
                       <div>
-                        <p className="text-xs font-semibold leading-none" style={{ color: active ? "var(--accent)" : "var(--foreground)" }}>{label}</p>
-                        <p className="text-xs mt-0.5" style={{ color: "var(--muted)", fontSize: "10px" }}>{sub}</p>
+                        <p className="text-xs font-bold leading-none" style={{ color: active ? "#fff" : "var(--foreground)", fontFamily: "var(--font-syne)" }}>{label}</p>
+                        <p className="text-xs mt-0.5" style={{ color: active ? "rgba(255,255,255,0.6)" : "var(--muted)", fontSize: "10px" }}>{sub}</p>
                       </div>
                     </button>
                   );
@@ -1002,7 +1004,7 @@ ${bodyHtml}
             {/* Reel Type selector — only for Instagram/TikTok */}
             {platform === "reels" && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>Type of Video</label>
+                <label className="text-xs font-semibold" style={{ color: "var(--muted)" }}>Type of Video</label>
                 <div className="relative">
                   <select
                     value={reelType}
@@ -1026,7 +1028,7 @@ ${bodyHtml}
 
             {/* 1. Video Title */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+              <label className="text-xs font-semibold" style={{ color: "var(--muted)" }}>
                 Video Title <span style={{ color: "var(--red)" }}>*</span>
               </label>
               <input
@@ -1070,8 +1072,8 @@ ${bodyHtml}
                   type="button"
                   onClick={() => refFileInputRef.current?.click()}
                   disabled={refUploading}
-                  className="text-xs px-2.5 py-1 rounded-lg disabled:opacity-50"
-                  style={{ background: "var(--surface-2)", color: "var(--muted)", border: "1px solid var(--border)" }}
+                  className="btn-press text-xs font-semibold px-2.5 py-1 rounded-lg disabled:opacity-50"
+                  style={{ background: "var(--surface-2)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.2)" }}
                 >
                   {refUploading ? "Uploading…" : "Upload file"}
                 </button>
@@ -1143,7 +1145,7 @@ ${bodyHtml}
 
             {/* 6. Script / Reel Length */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium" style={{ color: "var(--muted)" }}>
+              <label className="text-xs font-semibold" style={{ color: "var(--muted)" }}>
                 {platform === "reels" ? "Reel Length" : "Script Length"}
               </label>
               <div className="grid grid-cols-5 gap-1.5">
@@ -1154,11 +1156,11 @@ ${bodyHtml}
                     <button
                       key={len}
                       onClick={() => setScriptLength(len)}
-                      className="rounded-lg px-1.5 py-2.5 text-xs font-medium transition-all flex flex-col items-center gap-0.5"
-                      style={{ background: active ? "var(--accent-glow)" : "var(--surface-2)", color: active ? "var(--accent)" : "var(--muted)", border: `1px solid ${active ? "var(--accent)" : "var(--border)"}` }}
+                      className="btn-press rounded-xl px-1.5 py-2.5 text-xs font-medium flex flex-col items-center gap-0.5"
+                      style={{ background: active ? "var(--foreground)" : "var(--surface-2)", color: active ? "#fff" : "var(--muted)", border: `1.5px solid ${active ? "var(--foreground)" : "var(--border)"}` }}
                     >
-                      <span className="font-semibold" style={{ fontSize: "10px" }}>{info[len].label}</span>
-                      <span style={{ fontSize: "9px", opacity: 0.7 }}>{info[len].sub}</span>
+                      <span className="font-bold" style={{ fontSize: "10px" }}>{info[len].label}</span>
+                      <span style={{ fontSize: "9px", opacity: active ? 0.6 : 0.7 }}>{info[len].sub}</span>
                     </button>
                   );
                 })}
@@ -1167,7 +1169,7 @@ ${bodyHtml}
           </div>
 
           {error && (
-            <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
+            <div className="rounded-xl px-4 py-3 text-sm font-medium animate-scale-in" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>
               {error}
             </div>
           )}
@@ -1175,13 +1177,20 @@ ${bodyHtml}
           <button
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full rounded-xl py-3.5 text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            style={{ background: "var(--accent)", color: "#fff", boxShadow: loading ? "none" : "0 0 28px var(--accent-glow)" }}
+            className="btn-press w-full rounded-2xl py-4 font-bold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2.5"
+            style={{
+              background: loading ? "var(--border)" : "linear-gradient(135deg, var(--accent) 0%, #FF7B35 100%)",
+              color: loading ? "var(--muted)" : "#fff",
+              boxShadow: loading ? "none" : "var(--shadow-accent)",
+              fontFamily: "var(--font-syne)",
+              fontSize: "15px",
+              letterSpacing: "0.01em",
+            }}
           >
             {loading ? (
-              <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin inline-block" />{platform === "reels" ? "Writing your reel…" : "Writing your script…"}</>
+              <><span className="w-4 h-4 rounded-full border-2 border-current/30 border-t-current animate-spin inline-block" />{platform === "reels" ? "Writing your reel…" : "Writing your script…"}</>
             ) : (
-              <><span>✦</span> {platform === "reels" ? "Generate Reel Script" : "Generate Script"}</>
+              <><span className="text-lg leading-none">✦</span> {platform === "reels" ? "Generate Reel Script" : "Generate Script"}</>
             )}
           </button>
 

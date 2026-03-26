@@ -66,7 +66,7 @@ function Field({
 const INPUT_STYLE = {
   background: "var(--surface-2)",
   color: "var(--foreground)",
-  border: "1px solid var(--border)",
+  border: "1.5px solid var(--border)",
 } as const;
 
 export default function EditProfileModal({
@@ -517,25 +517,25 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(10,10,14,0.95)", backdropFilter: "blur(8px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+      style={{ background: "rgba(26,26,46,0.6)", backdropFilter: "blur(16px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="w-full max-w-2xl rounded-2xl flex flex-col overflow-hidden"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "90vh" }}
+        className="w-full max-w-2xl rounded-3xl flex flex-col overflow-hidden animate-scale-in"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "90vh", boxShadow: "var(--shadow-lg)" }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+        <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
           <div>
-            <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Edit Profile</p>
+            <p className="text-sm font-bold tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>Edit Profile</p>
             <p className="text-xs" style={{ color: "var(--muted)" }}>
-              {profile.name || "Your creator profile"} · {profile.path === "experienced" ? "Experienced creator" : "New creator"}
+              {profile.name || "Your creator profile"}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-sm"
+            className="btn-press w-7 h-7 flex items-center justify-center rounded-xl text-sm font-bold"
             style={{ color: "var(--muted)", background: "var(--surface-2)", border: "1px solid var(--border)" }}
           >
             ✕
@@ -543,16 +543,17 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+        <div className="flex gap-1 p-1.5 mx-6 my-3 rounded-xl flex-shrink-0" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className="flex-1 py-3 text-xs font-medium transition-colors"
+              className="btn-press flex-1 py-1.5 text-xs font-bold rounded-lg transition-all"
               style={{
                 color: safeTab === t.id ? "var(--foreground)" : "var(--muted)",
-                background: safeTab === t.id ? "var(--surface)" : "var(--surface-2)",
-                borderBottom: safeTab === t.id ? "2px solid var(--accent)" : "2px solid transparent",
+                background: safeTab === t.id ? "var(--surface)" : "transparent",
+                boxShadow: safeTab === t.id ? "var(--shadow-sm)" : "none",
+                fontFamily: "var(--font-syne)",
               }}
             >
               {t.label}
@@ -589,7 +590,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                       onClick={() => profileDocFileRef.current?.click()}
                       disabled={profileDocLoading}
                       className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
-                      style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                      style={{ background: "rgba(255,78,80,0.08)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.25)" }}
                     >
                       {profileDocLoading ? "Uploading…" : "Upload .pdf / .docx / .txt"}
                     </button>
@@ -616,7 +617,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
               />
 
               {whoAmIUploadError && (
-                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
+                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>
                   {whoAmIUploadError}
                 </p>
               )}
@@ -700,7 +701,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                       onClick={() => styleTextFileRef.current?.click()}
                       disabled={styleUploadLoading}
                       className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
-                      style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                      style={{ background: "rgba(255,78,80,0.08)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.25)" }}
                     >
                       {styleUploadLoading ? "Uploading…" : "Upload .pdf / .docx / .txt"}
                     </button>
@@ -727,7 +728,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
               />
 
               {styleUploadError && (
-                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
+                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>
                   {styleUploadError}
                 </p>
               )}
@@ -826,7 +827,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                         onClick={() => fileRef.current?.click()}
                         disabled={uploading}
                         className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
-                        style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}
+                        style={{ background: "rgba(255,78,80,0.08)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.25)" }}
                       >
                         {uploading ? "Uploading…" : "Upload .docx / .txt"}
                       </button>
@@ -919,18 +920,24 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t flex items-center justify-between flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+        <div className="px-6 py-4 border-t flex items-center justify-between flex-shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
           <button
             onClick={onClose}
-            className="text-sm px-4 py-2 rounded-lg"
-            style={{ color: "var(--muted)", background: "var(--surface-2)", border: "1px solid var(--border)" }}
+            className="btn-press text-sm font-medium px-4 py-2 rounded-xl"
+            style={{ color: "var(--muted)", background: "var(--surface)", border: "1px solid var(--border)" }}
           >
             Cancel
           </button>
           <button
             onClick={() => { void handleSave(); }}
-            className="text-sm font-semibold px-6 py-2 rounded-lg transition-all flex items-center gap-2"
-            style={{ background: saved ? "rgba(92,252,160,0.15)" : "var(--accent)", color: saved ? "var(--green)" : "#fff", border: saved ? "1px solid rgba(92,252,160,0.3)" : "none" }}
+            className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl flex items-center gap-2"
+            style={{
+              background: saved ? "rgba(0,201,167,0.1)" : "linear-gradient(135deg, var(--accent), #FF7B35)",
+              color: saved ? "var(--green)" : "#fff",
+              border: saved ? "1px solid rgba(0,201,167,0.3)" : "none",
+              boxShadow: saved ? "none" : "var(--shadow-accent)",
+              fontFamily: "var(--font-syne)",
+            }}
           >
             {saved ? "✓ Saved" : "Save Changes"}
           </button>

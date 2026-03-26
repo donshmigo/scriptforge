@@ -28,16 +28,16 @@ const CONTENT_STYLES: { id: ContentStyle; label: string; icon: string; desc: str
 const INPUT_STYLE = {
   background: "var(--surface-2)",
   color: "var(--foreground)",
-  border: "1px solid var(--border)",
+  border: "1.5px solid var(--border)",
 } as const;
 
 function ProgressBar({ current, total }: { current: number; total: number }) {
   const pct = Math.round((current / total) * 100);
   return (
-    <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
+    <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "var(--border)" }}>
       <div
         className="h-full rounded-full transition-all duration-500"
-        style={{ width: `${pct}%`, background: "var(--accent)" }}
+        style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--accent), #FF7B35)" }}
       />
     </div>
   );
@@ -45,7 +45,7 @@ function ProgressBar({ current, total }: { current: number; total: number }) {
 
 function StepLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-semibold uppercase tracking-widest mb-1" style={{ color: "var(--accent)" }}>
+    <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "var(--accent)", fontFamily: "var(--font-syne)" }}>
       {children}
     </p>
   );
@@ -53,7 +53,7 @@ function StepLabel({ children }: { children: React.ReactNode }) {
 
 function Question({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="text-lg font-bold mb-1 leading-snug" style={{ color: "var(--foreground)" }}>
+    <h2 className="text-xl font-bold mb-1 leading-snug tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>
       {children}
     </h2>
   );
@@ -61,7 +61,7 @@ function Question({ children }: { children: React.ReactNode }) {
 
 function Hint({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs leading-5 mb-4" style={{ color: "var(--muted)" }}>
+    <p className="text-sm leading-5 mb-4" style={{ color: "var(--muted)" }}>
       {children}
     </p>
   );
@@ -74,10 +74,10 @@ function Input({ value, onChange, placeholder }: { value: string; onChange: (v: 
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="w-full rounded-lg px-3 py-2.5 text-sm outline-none"
+      className="w-full rounded-xl px-4 py-3 text-sm outline-none transition-all"
       style={INPUT_STYLE}
-      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+      onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(255,78,80,0.1)"; }}
+      onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
     />
   );
 }
@@ -89,10 +89,10 @@ function Textarea({ value, onChange, placeholder, rows = 4 }: { value: string; o
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       rows={rows}
-      className="w-full rounded-lg px-3 py-2.5 text-sm outline-none resize-none leading-6"
+      className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none leading-6 transition-all"
       style={INPUT_STYLE}
-      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+      onFocus={(e) => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(255,78,80,0.1)"; }}
+      onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.boxShadow = "none"; }}
     />
   );
 }
@@ -323,12 +323,12 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
-      style={{ background: "rgba(10,10,14,0.98)", backdropFilter: "blur(12px)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in"
+      style={{ background: "rgba(26,26,46,0.6)", backdropFilter: "blur(16px)" }}
     >
       <div
-        className="w-full max-w-xl rounded-2xl flex flex-col"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "92vh" }}
+        className="w-full max-w-xl rounded-3xl flex flex-col animate-scale-in"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)", maxHeight: "92vh", boxShadow: "var(--shadow-lg)" }}
       >
         {/* Progress bar */}
         {showProgress && (
@@ -342,10 +342,11 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
 
           {/* ── STEP 0: Path Selection ── */}
           {step === 0 && (
-            <div className="flex flex-col gap-6">
-              <div className="text-center">
-                <p className="text-2xl font-bold mb-2" style={{ color: "var(--foreground)" }}>Build your writing profile</p>
-                <p className="text-sm" style={{ color: "var(--muted)" }}>
+            <div className="flex flex-col gap-6 animate-fade-in-up">
+              <div className="text-center pt-2">
+                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-4" style={{ background: "linear-gradient(135deg, rgba(255,78,80,0.1), rgba(255,123,53,0.1))", border: "1px solid rgba(255,78,80,0.2)" }}>✦</div>
+                <p className="text-2xl font-bold mb-2 tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>Build your writing profile</p>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
                   We'll use your real content to make every script sound exactly like you.
                 </p>
               </div>
@@ -354,35 +355,33 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
                 <button
                   type="button"
                   onClick={() => { setPath("youtube"); setStep(1); setError(""); }}
-                  className="w-full rounded-2xl p-5 text-left flex items-start gap-4 transition-all hover:scale-[1.01]"
-                  style={{ background: "var(--surface-2)", border: "2px solid var(--border)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                  className="card-lift w-full rounded-2xl p-5 text-left flex items-start gap-4"
+                  style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
                 >
-                  <span className="text-3xl flex-shrink-0 mt-0.5">📹</span>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: "rgba(255,78,80,0.1)", border: "1px solid rgba(255,78,80,0.2)" }}>📹</div>
                   <div>
-                    <p className="text-sm font-bold mb-1" style={{ color: "var(--foreground)" }}>I have a YouTube channel</p>
+                    <p className="text-sm font-bold mb-1 tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>I have a YouTube channel</p>
                     <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>
-                      We'll pull your videos and analyze your brand voice, writing style, and who you are — automatically.
+                      We'll pull your videos and analyze your brand voice, writing style, and identity — automatically.
                     </p>
                   </div>
+                  <span className="text-lg flex-shrink-0 mt-0.5 ml-auto" style={{ color: "var(--border-light)" }}>→</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => { setPath("manual"); setStep(1); setError(""); }}
-                  className="w-full rounded-2xl p-5 text-left flex items-start gap-4 transition-all hover:scale-[1.01]"
-                  style={{ background: "var(--surface-2)", border: "2px solid var(--border)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                  className="card-lift w-full rounded-2xl p-5 text-left flex items-start gap-4"
+                  style={{ background: "var(--surface-2)", border: "1.5px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
                 >
-                  <span className="text-3xl flex-shrink-0 mt-0.5">✏️</span>
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0" style={{ background: "rgba(124,92,252,0.1)", border: "1px solid rgba(124,92,252,0.2)" }}>✏️</div>
                   <div>
-                    <p className="text-sm font-bold mb-1" style={{ color: "var(--foreground)" }}>I don't have YouTube</p>
+                    <p className="text-sm font-bold mb-1 tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>I don't have YouTube</p>
                     <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>
-                      Answer a few focused questions about your voice, niche, and audience — we'll build your profile from scratch.
+                      Answer a few questions about your voice, niche, and audience — we'll build your profile from scratch.
                     </p>
                   </div>
+                  <span className="text-lg flex-shrink-0 mt-0.5 ml-auto" style={{ color: "var(--border-light)" }}>→</span>
                 </button>
               </div>
             </div>
@@ -403,21 +402,25 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
                 onChange={setChannelUrl}
                 placeholder="https://youtube.com/@yourhandle"
               />
-              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
+              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>}
             </div>
           )}
 
           {/* Y-Step 2: Loading */}
           {path === "youtube" && step === 2 && (
-            <div className="flex flex-col items-center justify-center gap-5 py-10">
-              <span className="w-10 h-10 rounded-full border-2 border-indigo-400/30 border-t-indigo-400 animate-spin" />
+            <div className="flex flex-col items-center justify-center gap-5 py-12">
+              <div className="relative w-14 h-14">
+                <div className="absolute inset-0 rounded-full" style={{ background: "conic-gradient(var(--accent), #FF7B35, rgba(255,78,80,0.1), var(--accent))", animation: "spinGradient 1.2s linear infinite" }} />
+                <div className="absolute inset-1.5 rounded-full" style={{ background: "var(--surface)" }} />
+                <div className="absolute inset-0 flex items-center justify-center text-base">✦</div>
+              </div>
               <div className="text-center">
-                <p className="text-sm font-semibold mb-1" style={{ color: "var(--foreground)" }}>{youtubeStatus || "Analyzing your channel…"}</p>
+                <p className="text-sm font-bold mb-1 tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>{youtubeStatus || "Analyzing your channel…"}</p>
                 <p className="text-xs" style={{ color: "var(--muted)" }}>This takes about 30–60 seconds. Please don't close this window.</p>
               </div>
               {error && (
                 <div className="w-full">
-                  <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>
+                  <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>
                 </div>
               )}
             </div>
@@ -433,7 +436,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
               </div>
 
               {styleProfile && (
-                <div className="rounded-xl px-4 py-3 flex items-center gap-3" style={{ background: "rgba(92,252,160,0.06)", border: "1px solid rgba(92,252,160,0.2)" }}>
+                <div className="rounded-xl px-4 py-3 flex items-center gap-3" style={{ background: "rgba(0,201,167,0.06)", border: "1px solid rgba(0,201,167,0.25)" }}>
                   <span style={{ color: "var(--green)" }}>✓</span>
                   <p className="text-xs" style={{ color: "var(--foreground)" }}>
                     <strong>Style profile built</strong> from {styleProfile.scripts.length} video{styleProfile.scripts.length !== 1 ? "s" : ""}
@@ -479,7 +482,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
                   </div>
                 </div>
               </div>
-              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
+              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>}
             </div>
           )}
 
@@ -493,7 +496,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
               </div>
 
               {profileDoc ? (
-                <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(92,252,160,0.06)", border: "1px solid rgba(92,252,160,0.2)" }}>
+                <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(0,201,167,0.06)", border: "1px solid rgba(0,201,167,0.25)" }}>
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -517,7 +520,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
                   style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
                 >
                   {docLoading ? (
-                    <span className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                    <span className="w-6 h-6 rounded-full border-2 border-current/20 border-t-current animate-spin" style={{ color: "var(--accent)" }} />
                   ) : (
                     <>
                       <span className="text-3xl">📄</span>
@@ -525,13 +528,13 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
                         <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Drop a document here</p>
                         <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Brand guide, bio, writing doc · .pdf, .docx or .txt</p>
                       </div>
-                      <span className="text-xs font-medium px-3 py-1.5 rounded-lg" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}>Browse files</span>
+                      <span className="btn-press text-xs font-bold px-3 py-1.5 rounded-lg" style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: "0 3px 10px rgba(255,78,80,0.3)" }}>Browse files</span>
                     </>
                   )}
                 </div>
               )}
               <input ref={docFileRef} type="file" accept=".pdf,.docx,.txt,.md" className="hidden" onChange={(e) => handleDocUpload(e.target.files)} />
-              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
+              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>}
             </div>
           )}
 
@@ -559,7 +562,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
                 <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>Channel or website URL (optional)</label>
                 <Input value={channelUrl} onChange={setChannelUrl} placeholder="https://…" />
               </div>
-              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
+              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>}
             </div>
           )}
 
@@ -582,7 +585,7 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
 • Featured in Forbes, Business Insider
 • Built and sold a 7-figure business`}
               />
-              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
+              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>}
             </div>
           )}
 
@@ -605,7 +608,7 @@ Phase 3 — Aggressive debt stacking (highest-interest first, minimum on everyth
 
 This is different because most advice starts with budgeting apps. Mine starts with the psychology of avoidance.`}
               />
-              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
+              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>}
             </div>
           )}
 
@@ -627,7 +630,7 @@ That's not the problem. The average American wastes $400/month on forgotten subs
 
 The real lever is fixed costs, not discretionary spending.`}
               />
-              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
+              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>}
             </div>
           )}
 
@@ -645,7 +648,7 @@ The real lever is fixed costs, not discretionary spending.`}
                 rows={4}
                 placeholder="e.g. Millennials earning $60–80K who feel behind financially, carry $30–50K in student debt or credit card debt, and want a clear, no-bullshit path to financial stability within 3 years."
               />
-              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
+              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>}
             </div>
           )}
 
@@ -658,22 +661,22 @@ The real lever is fixed costs, not discretionary spending.`}
                 <Hint>Pick the format that best describes how you present content to your audience.</Hint>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 {CONTENT_STYLES.map((cs) => {
                   const active = contentStyle === cs.id;
                   return (
                     <button key={cs.id} type="button" onClick={() => setContentStyle(cs.id)}
-                      className="rounded-xl p-3 text-left transition-all"
-                      style={{ background: active ? "var(--accent-glow)" : "var(--surface-2)", border: `1px solid ${active ? "var(--accent)" : "var(--border)"}` }}
+                      className="card-lift rounded-xl p-3.5 text-left"
+                      style={{ background: active ? "rgba(255,78,80,0.06)" : "var(--surface-2)", border: `1.5px solid ${active ? "var(--accent)" : "var(--border)"}`, boxShadow: active ? "0 4px 16px rgba(255,78,80,0.15)" : "none" }}
                     >
-                      <p className="text-sm mb-0.5">{cs.icon}</p>
-                      <p className="text-xs font-semibold" style={{ color: active ? "var(--accent)" : "var(--foreground)" }}>{cs.label}</p>
-                      <p className="text-xs" style={{ color: "var(--muted)" }}>{cs.desc}</p>
+                      <p className="text-base mb-1.5">{cs.icon}</p>
+                      <p className="text-xs font-bold" style={{ color: active ? "var(--accent)" : "var(--foreground)", fontFamily: "var(--font-syne)" }}>{cs.label}</p>
+                      <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>{cs.desc}</p>
                     </button>
                   );
                 })}
               </div>
-              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
+              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>}
             </div>
           )}
 
@@ -687,7 +690,7 @@ The real lever is fixed costs, not discretionary spending.`}
               </div>
 
               {profileDoc ? (
-                <div className="rounded-xl p-4 flex flex-col gap-2" style={{ background: "rgba(92,252,160,0.06)", border: "1px solid rgba(92,252,160,0.2)" }}>
+                <div className="rounded-xl p-4 flex flex-col gap-2" style={{ background: "rgba(0,201,167,0.06)", border: "1px solid rgba(0,201,167,0.25)" }}>
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="flex items-center gap-2">
@@ -711,7 +714,7 @@ The real lever is fixed costs, not discretionary spending.`}
                   style={{ borderColor: "var(--border-light)", background: "var(--surface-2)" }}
                 >
                   {docLoading ? (
-                    <span className="w-6 h-6 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                    <span className="w-6 h-6 rounded-full border-2 border-current/20 border-t-current animate-spin" style={{ color: "var(--accent)" }} />
                   ) : (
                     <>
                       <span className="text-3xl">📂</span>
@@ -719,24 +722,24 @@ The real lever is fixed costs, not discretionary spending.`}
                         <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Drop a file here</p>
                         <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Script, brand doc, style guide · .pdf, .docx or .txt</p>
                       </div>
-                      <span className="text-xs font-medium px-3 py-1.5 rounded-lg" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}>Browse files</span>
+                      <span className="btn-press text-xs font-bold px-3 py-1.5 rounded-lg" style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: "0 3px 10px rgba(255,78,80,0.3)" }}>Browse files</span>
                     </>
                   )}
                 </div>
               )}
               <input ref={docFileRef} type="file" accept=".pdf,.docx,.txt,.md" className="hidden" onChange={(e) => handleDocUpload(e.target.files)} />
-              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
+              {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,78,80,0.07)", color: "var(--red)", border: "1px solid rgba(255,78,80,0.2)" }}>{error}</p>}
             </div>
           )}
 
         </div>
 
         {/* ── Footer ──────────────────────────────────────────────────────── */}
-        <div className="px-6 py-4 border-t flex items-center justify-between flex-shrink-0" style={{ borderColor: "var(--border)" }}>
+        <div className="px-6 py-4 border-t flex items-center justify-between flex-shrink-0" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
           {/* Back button */}
           {step > 0 && !(path === "youtube" && step === 2) ? (
-            <button type="button" onClick={back} className="text-sm px-4 py-2 rounded-lg"
-              style={{ color: "var(--muted)", background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+            <button type="button" onClick={back} className="btn-press text-sm font-medium px-4 py-2 rounded-xl"
+              style={{ color: "var(--muted)", background: "var(--surface)", border: "1px solid var(--border)" }}>
               ← Back
             </button>
           ) : (
@@ -749,23 +752,23 @@ The real lever is fixed costs, not discretionary spending.`}
           {/* YouTube path actions */}
           {path === "youtube" && step === 1 && (
             <button type="button" onClick={handleYoutubeAnalyze}
-              className="text-sm font-semibold px-6 py-2 rounded-lg flex items-center gap-2"
-              style={{ background: "var(--accent)", color: "#fff" }}>
+              className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl flex items-center gap-2"
+              style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: "var(--shadow-accent)", fontFamily: "var(--font-syne)" }}>
               Analyze Channel →
             </button>
           )}
           {path === "youtube" && step === 2 && <div />}
           {path === "youtube" && step === 3 && (
             <button type="button" onClick={() => { if (!name.trim()) { setError("Please enter your name or handle."); return; } next(); }}
-              className="text-sm font-semibold px-6 py-2 rounded-lg"
-              style={{ background: "var(--accent)", color: "#fff" }}>
+              className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl"
+              style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: "var(--shadow-accent)", fontFamily: "var(--font-syne)" }}>
               Looks good →
             </button>
           )}
           {path === "youtube" && step === 4 && (
             <button type="button" onClick={handleComplete} disabled={saving}
-              className="text-sm font-semibold px-6 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50"
-              style={{ background: "var(--accent)", color: "#fff" }}>
+              className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: saving ? "none" : "var(--shadow-accent)", fontFamily: "var(--font-syne)" }}>
               {saving ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Saving…</> : "Start Writing →"}
             </button>
           )}
@@ -773,50 +776,50 @@ The real lever is fixed costs, not discretionary spending.`}
           {/* Manual path actions */}
           {path === "manual" && step === 1 && (
             <button type="button" onClick={() => { if (!name.trim()) { setError("Please enter your name."); return; } if (!topic.trim()) { setError("Please describe what you create content about."); return; } next(); }}
-              className="text-sm font-semibold px-6 py-2 rounded-lg"
-              style={{ background: "var(--accent)", color: "#fff" }}>
+              className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl"
+              style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: "var(--shadow-accent)", fontFamily: "var(--font-syne)" }}>
               Next →
             </button>
           )}
           {path === "manual" && step === 2 && (
             <button type="button" onClick={() => { if (!credibilityStack.trim()) { setError("Please add at least one proof point."); return; } next(); }}
-              className="text-sm font-semibold px-6 py-2 rounded-lg"
-              style={{ background: "var(--accent)", color: "#fff" }}>
+              className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl"
+              style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: "var(--shadow-accent)", fontFamily: "var(--font-syne)" }}>
               Next →
             </button>
           )}
           {path === "manual" && step === 3 && (
             <button type="button" onClick={() => { if (!uniqueMethod.trim()) { setError("Please describe your method or approach."); return; } next(); }}
-              className="text-sm font-semibold px-6 py-2 rounded-lg"
-              style={{ background: "var(--accent)", color: "#fff" }}>
+              className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl"
+              style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: "var(--shadow-accent)", fontFamily: "var(--font-syne)" }}>
               Next →
             </button>
           )}
           {path === "manual" && step === 4 && (
             <button type="button" onClick={() => { if (!contraryBelief.trim()) { setError("Please share your contrarian take."); return; } next(); }}
-              className="text-sm font-semibold px-6 py-2 rounded-lg"
-              style={{ background: "var(--accent)", color: "#fff" }}>
+              className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl"
+              style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: "var(--shadow-accent)", fontFamily: "var(--font-syne)" }}>
               Next →
             </button>
           )}
           {path === "manual" && step === 5 && (
             <button type="button" onClick={() => { if (!targetPerson.trim()) { setError("Please describe who your content is for."); return; } next(); }}
-              className="text-sm font-semibold px-6 py-2 rounded-lg"
-              style={{ background: "var(--accent)", color: "#fff" }}>
+              className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl"
+              style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: "var(--shadow-accent)", fontFamily: "var(--font-syne)" }}>
               Next →
             </button>
           )}
           {path === "manual" && step === 6 && (
             <button type="button" onClick={next}
-              className="text-sm font-semibold px-6 py-2 rounded-lg"
-              style={{ background: "var(--accent)", color: "#fff" }}>
+              className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl"
+              style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: "var(--shadow-accent)", fontFamily: "var(--font-syne)" }}>
               Next →
             </button>
           )}
           {path === "manual" && step === 7 && (
             <button type="button" onClick={handleComplete} disabled={saving}
-              className="text-sm font-semibold px-6 py-2 rounded-lg flex items-center gap-2 disabled:opacity-50"
-              style={{ background: "var(--accent)", color: "#fff" }}>
+              className="btn-press text-sm font-bold px-6 py-2.5 rounded-xl flex items-center gap-2 disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, var(--accent), #FF7B35)", color: "#fff", boxShadow: saving ? "none" : "var(--shadow-accent)", fontFamily: "var(--font-syne)" }}>
               {saving ? <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />Saving…</> : "Build My Profile →"}
             </button>
           )}
