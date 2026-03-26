@@ -147,6 +147,10 @@ export default function EditProfileModal({
   const [profileDocLoading, setProfileDocLoading] = useState(false);
   const profileDocFileRef = useRef<HTMLInputElement>(null);
 
+  // Upload errors (per-tab)
+  const [whoAmIUploadError, setWhoAmIUploadError] = useState("");
+  const [styleUploadError, setStyleUploadError] = useState("");
+
   // Style tab — editable text
   const [styleText, setStyleText] = useState(initialStyle?.analysis ?? "");
   const [styleUploadLoading, setStyleUploadLoading] = useState(false);
@@ -404,25 +408,28 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
   const handleGuideFileUpload = useCallback(async (
     files: FileList | null,
     setter: (text: string) => void,
-    setLoading: (v: boolean) => void
+    setLoading: (v: boolean) => void,
+    setError?: (msg: string) => void,
   ) => {
     if (!files || files.length === 0) return;
     setLoading(true);
+    setError?.("");
     try {
       const formData = new FormData();
       Array.from(files).forEach((f) => formData.append("files", f));
       const res = await fetch("/api/parse-doc", { method: "POST", body: formData });
       let data: any;
-      try { data = await res.json(); } catch { throw new Error("Upload request timed out — try again."); }
+      try { data = await res.json(); } catch { throw new Error("Upload timed out — try again."); }
       if (!res.ok) throw new Error((data.error as string) || "Upload failed.");
       const texts: string[] = (data.scripts as { text: string }[]).map((s) => s.text);
-      setter(texts.join("\n\n---\n\n"));
+      setter(texts.join("\n\n"));
     } catch (e: unknown) {
-      setStyleError(e instanceof Error ? e.message : "Upload failed.");
+      const msg = e instanceof Error ? e.message : "Upload failed.";
+      setError ? setError(msg) : setStyleError(msg);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setStyleError]);
 
   const handleAiUpdate = useCallback(async (
     guideType: "introGuide" | "scriptGuide" | "whoAmI" | "whoAmIDoc" | "styleDoc",
@@ -591,7 +598,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                       type="file"
                       accept=".pdf,.docx,.txt,.md"
                       className="hidden"
-                      onChange={(e) => handleGuideFileUpload(e.target.files, setProfileDoc, setProfileDocLoading)}
+                      onChange={(e) => handleGuideFileUpload(e.target.files, setProfileDoc, setProfileDocLoading, setWhoAmIUploadError)}
                     />
                   </div>
                 </div>
@@ -607,6 +614,12 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                 onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
                 onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
               />
+
+              {whoAmIUploadError && (
+                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
+                  {whoAmIUploadError}
+                </p>
+              )}
 
               {profileDoc ? (
                 <div className="flex items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
@@ -696,7 +709,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                       type="file"
                       accept=".pdf,.docx,.txt,.md"
                       className="hidden"
-                      onChange={(e) => handleGuideFileUpload(e.target.files, setStyleText, setStyleUploadLoading)}
+                      onChange={(e) => handleGuideFileUpload(e.target.files, setStyleText, setStyleUploadLoading, setStyleUploadError)}
                     />
                   </div>
                 </div>
@@ -712,6 +725,12 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                 onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
                 onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
               />
+
+              {styleUploadError && (
+                <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
+                  {styleUploadError}
+                </p>
+              )}
 
               {styleText ? (
                 <div className="flex items-center gap-2 text-xs" style={{ color: "var(--muted)" }}>
