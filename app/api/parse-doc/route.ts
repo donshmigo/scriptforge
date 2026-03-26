@@ -9,14 +9,18 @@ export interface ParsedScript {
 }
 
 async function extractPdf(buffer: Buffer): Promise<string> {
-  const { extractText } = await import("unpdf");
-  // unpdf accepts Uint8Array (Buffer extends Uint8Array)
-  const { text } = await extractText(buffer, { mergePages: true });
-  return (text ?? "").trim();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mod: any = await import("unpdf");
+  const { extractText } = mod.default ?? mod;
+  const result = await extractText(new Uint8Array(buffer), { mergePages: true });
+  const text = Array.isArray(result.text) ? result.text.join("\n") : (result.text ?? "");
+  return text.trim();
 }
 
 async function extractDocx(buffer: Buffer): Promise<string> {
-  const mammoth = await import("mammoth");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mod: any = await import("mammoth");
+  const mammoth = mod.default ?? mod;
   const result = await mammoth.extractRawText({ buffer });
   return result.value?.trim() ?? "";
 }
