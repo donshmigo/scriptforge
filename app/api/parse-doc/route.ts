@@ -8,6 +8,19 @@ export interface ParsedScript {
   wordCount: number;
 }
 
+async function extractPdf(buffer: Buffer): Promise<string> {
+  try {
+    // pdf-parse reads all text content regardless of visual formatting/banners
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfMod: any = await import("pdf-parse");
+    const pdfParse = pdfMod.default ?? pdfMod;
+    const result = await pdfParse(buffer);
+    return result.text?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
 async function extractDocx(buffer: Buffer): Promise<string> {
   // Try mammoth first
   try {
@@ -58,7 +71,9 @@ export async function POST(req: NextRequest) {
       let text = "";
 
       const lower = name.toLowerCase();
-      if (lower.endsWith(".docx")) {
+      if (lower.endsWith(".pdf")) {
+        text = await extractPdf(buffer);
+      } else if (lower.endsWith(".docx")) {
         text = await extractDocx(buffer);
       } else {
         // .txt, .md, anything else — read as UTF-8

@@ -523,14 +523,14 @@ export default function Onboarding({ onComplete, userId = "", personaId: _defaul
                       <span className="text-3xl">📄</span>
                       <div className="text-center">
                         <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Drop a document here</p>
-                        <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Brand guide, bio, writing doc · .docx or .txt</p>
+                        <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Brand guide, bio, writing doc · .pdf, .docx or .txt</p>
                       </div>
                       <span className="text-xs font-medium px-3 py-1.5 rounded-lg" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}>Browse files</span>
                     </>
                   )}
                 </div>
               )}
-              <input ref={docFileRef} type="file" accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleDocUpload(e.target.files)} />
+              <input ref={docFileRef} type="file" accept=".pdf,.docx,.txt,.md" className="hidden" onChange={(e) => handleDocUpload(e.target.files)} />
               {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
             </div>
           )}
@@ -649,44 +649,29 @@ The real lever is fixed costs, not discretionary spending.`}
             </div>
           )}
 
-          {/* M-Step 6: Voice + style */}
+          {/* M-Step 6: Content style */}
           {path === "manual" && step === 6 && (
             <div className="flex flex-col gap-5">
               <div>
                 <StepLabel>Step 6 of 7</StepLabel>
-                <Question>How do you actually talk to your audience?</Question>
-                <Hint>Pick your content style, then write a few sentences the way you'd naturally open a video. This is the single most important input for making scripts sound like you.</Hint>
+                <Question>What's your content style?</Question>
+                <Hint>Pick the format that best describes how you present content to your audience.</Hint>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium mb-2" style={{ color: "var(--muted)" }}>Content style</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {CONTENT_STYLES.map((cs) => {
-                    const active = contentStyle === cs.id;
-                    return (
-                      <button key={cs.id} type="button" onClick={() => setContentStyle(cs.id)}
-                        className="rounded-xl p-3 text-left transition-all"
-                        style={{ background: active ? "var(--accent-glow)" : "var(--surface-2)", border: `1px solid ${active ? "var(--accent)" : "var(--border)"}` }}
-                      >
-                        <p className="text-sm mb-0.5">{cs.icon}</p>
-                        <p className="text-xs font-semibold" style={{ color: active ? "var(--accent)" : "var(--foreground)" }}>{cs.label}</p>
-                        <p className="text-xs" style={{ color: "var(--muted)" }}>{cs.desc}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: "var(--muted)" }}>Write how you'd open a video</label>
-                <Textarea
-                  value={voiceSample}
-                  onChange={setVoiceSample}
-                  rows={6}
-                  placeholder={`Just write naturally — pretend you're about to hit record. Don't overthink it.
-
-e.g. "Okay so I want to talk about something that nobody says out loud — most people who are "bad with money" aren't bad with money. They're bad with fixed costs. And there's a huge difference. Let me show you what I mean…"`}
-                />
+              <div className="grid grid-cols-2 gap-2">
+                {CONTENT_STYLES.map((cs) => {
+                  const active = contentStyle === cs.id;
+                  return (
+                    <button key={cs.id} type="button" onClick={() => setContentStyle(cs.id)}
+                      className="rounded-xl p-3 text-left transition-all"
+                      style={{ background: active ? "var(--accent-glow)" : "var(--surface-2)", border: `1px solid ${active ? "var(--accent)" : "var(--border)"}` }}
+                    >
+                      <p className="text-sm mb-0.5">{cs.icon}</p>
+                      <p className="text-xs font-semibold" style={{ color: active ? "var(--accent)" : "var(--foreground)" }}>{cs.label}</p>
+                      <p className="text-xs" style={{ color: "var(--muted)" }}>{cs.desc}</p>
+                    </button>
+                  );
+                })}
               </div>
               {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
             </div>
@@ -732,14 +717,14 @@ e.g. "Okay so I want to talk about something that nobody says out loud — most 
                       <span className="text-3xl">📂</span>
                       <div className="text-center">
                         <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>Drop a file here</p>
-                        <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Script, brand doc, style guide · .docx or .txt</p>
+                        <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>Script, brand doc, style guide · .pdf, .docx or .txt</p>
                       </div>
                       <span className="text-xs font-medium px-3 py-1.5 rounded-lg" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid var(--accent)" }}>Browse files</span>
                     </>
                   )}
                 </div>
               )}
-              <input ref={docFileRef} type="file" accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleDocUpload(e.target.files)} />
+              <input ref={docFileRef} type="file" accept=".pdf,.docx,.txt,.md" className="hidden" onChange={(e) => handleDocUpload(e.target.files)} />
               {error && <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>{error}</p>}
             </div>
           )}
@@ -822,7 +807,7 @@ e.g. "Okay so I want to talk about something that nobody says out loud — most 
             </button>
           )}
           {path === "manual" && step === 6 && (
-            <button type="button" onClick={() => { if (!voiceSample.trim()) { setError("Please write a few sentences in your natural voice — this is the most important step."); return; } next(); }}
+            <button type="button" onClick={next}
               className="text-sm font-semibold px-6 py-2 rounded-lg"
               style={{ background: "var(--accent)", color: "#fff" }}>
               Next →

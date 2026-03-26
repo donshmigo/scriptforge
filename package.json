@@ -16,10 +16,11 @@
     "mammoth": "^1.11.0",
     "next": "16.1.6",
     "openai": "^6.25.0",
+    "pdf-parse": "^2.4.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "three": "^0.183.1",
-"youtubei.js": "^16.0.1"
+    "youtubei.js": "^16.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -645,7 +645,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                   <input
                     ref={profileDocFileRef}
                     type="file"
-                    accept=".docx,.txt,.md"
+                    accept=".pdf,.docx,.txt,.md"
                     className="hidden"
                     onChange={(e) => handleProfileDocUpload(e.target.files)}
                   />
@@ -946,7 +946,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                       )}
                     </div>
                   )}
-                  <input ref={styleDocRef} type="file" accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleStyleDocUpload(e.target.files)} />
+                  <input ref={styleDocRef} type="file" accept=".pdf,.docx,.txt,.md" className="hidden" onChange={(e) => handleStyleDocUpload(e.target.files)} />
 
                   {styleError && (
                     <p className="text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(252,92,124,0.08)", color: "var(--red)", border: "1px solid rgba(252,92,124,0.2)" }}>
@@ -1028,7 +1028,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                           </>
                         )}
                     </div>
-                    <input ref={fileInputRef} type="file" multiple accept=".docx,.txt,.md" className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
+                    <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.txt,.md" className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
 
                     {pendingScripts.length > 0 && (
                       <div className="flex flex-col gap-1 mb-2">
@@ -1126,7 +1126,7 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                       <input
                         ref={fileRef}
                         type="file"
-                        accept=".docx,.txt,.md"
+                        accept=".pdf,.docx,.txt,.md"
                         multiple
                         className="hidden"
                         onChange={(e) => handleGuideFileUpload(e.target.files, setGuide, setUploading)}
