@@ -13,9 +13,24 @@ const EMPTY_WHO_AM_I: WhoAmI = {
 };
 
 function rowToProfile(row: Record<string, unknown>): PersonaProfile {
+  const whoAmI = (row.who_am_i as WhoAmI) ?? { ...EMPTY_WHO_AM_I };
+
+  // profile_doc TEXT column takes precedence over the JSONB field (handles large docs better)
+  const profileDocText = (row.profile_doc as string) ?? whoAmI.profileDoc ?? "";
+  const mergedWhoAmI: WhoAmI = { ...whoAmI, profileDoc: profileDocText };
+
+  // style_doc TEXT column takes precedence over analysis inside style_profile JSONB
+  const baseStyleProfile = (row.style_profile as PersonaProfile["styleProfile"]) ?? null;
+  const styleDocText = (row.style_doc as string) ?? "";
+  const mergedStyleProfile = baseStyleProfile
+    ? { ...baseStyleProfile, analysis: styleDocText || baseStyleProfile.analysis }
+    : styleDocText
+    ? { scripts: [], analysis: styleDocText, analyzedAt: Date.now(), isDoc: true }
+    : null;
+
   return {
-    whoAmI: (row.who_am_i as WhoAmI) ?? { ...EMPTY_WHO_AM_I },
-    styleProfile: (row.style_profile as PersonaProfile["styleProfile"]) ?? null,
+    whoAmI: mergedWhoAmI,
+    styleProfile: mergedStyleProfile,
     introGuide: (row.intro_guide as string) ?? "",
     scriptGuide: (row.script_guide as string) ?? "",
   };
@@ -48,14 +63,34 @@ export async function upsertPersonaProfile(
     persona_id: personaId,
     updated_at: new Date().toISOString(),
   };
-  if (profile.whoAmI !== undefined) payload.who_am_i = profile.whoAmI;
-  if (profile.styleProfile !== undefined) payload.style_profile = profile.styleProfile;
+
+  if (profile.whoAmI !== undefined) {
+    // Store structured fields in JSONB, but profileDoc in its own TEXT column
+    const { profileDoc, ...structuredFields } = profile.whoAmI;
+    payload.who_am_i = structuredFields;
+    payload.profile_doc = profileDoc ?? "";
+  }
+
+  if (profile.styleProfile !== undefined) {
+    if (profile.styleProfile === null) {
+      payload.style_profile = null;
+      payload.style_doc = "";
+    } else {
+      // Store analysis in its own TEXT column, keep metadata in JSONB
+      const { analysis, ...meta } = profile.styleProfile;
+      payload.style_profile = meta;
+      payload.style_doc = analysis ?? "";
+    }
+  }
+
   if (profile.introGuide !== undefined) payload.intro_guide = profile.introGuide;
   if (profile.scriptGuide !== undefined) payload.script_guide = profile.scriptGuide;
 
-  await supabase
+  const { error } = await supabase
     .from("user_persona_profiles")
     .upsert(payload, { onConflict: "user_id,persona_id" });
+
+  if (error) throw new Error(error.message);
 }
 
 export async function getAllPersonaProfiles(
