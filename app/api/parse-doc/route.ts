@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import mammoth from "mammoth";
 
 export const runtime = "nodejs";
 
@@ -9,20 +10,31 @@ export interface ParsedScript {
 }
 
 async function extractPdf(buffer: Buffer): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mod: any = await import("unpdf");
-  const { extractText } = mod.default ?? mod;
+  // Use unpdf (PDF.js-based) — handles rich PDFs including banners and tables
+  const { extractText } = await import("unpdf");
   const result = await extractText(new Uint8Array(buffer), { mergePages: true });
-  const text = Array.isArray(result.text) ? result.text.join("\n") : (result.text ?? "");
-  return text.trim();
+  // mergePages:true returns { text: string }, otherwise { text: string[] }
+  const raw = Array.isArray(result.text) ? result.text.join("\n") : result.text;
+  return (raw ?? "").trim();
 }
 
 async function extractDocx(buffer: Buffer): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mod: any = await import("mammoth");
-  const mammoth = mod.default ?? mod;
+  // mammoth.extractRawText pulls all text including table cells
   const result = await mammoth.extractRawText({ buffer });
-  return result.value?.trim() ?? "";
+  const text = result.value?.trim() ?? "";
+  if (text.length > 20) return text;
+
+  // Fallback: get HTML and strip tags (better table/list handling in edge cases)
+  const html = await mammoth.convertToHtml({ buffer });
+  return html.value
+    .replace(/<\/?(td|th|li|br|p|div|h[1-6])[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 export async function POST(req: NextRequest) {
@@ -49,7 +61,7 @@ export async function POST(req: NextRequest) {
         } else if (lower.endsWith(".docx")) {
           text = await extractDocx(buffer);
         } else {
-          // .txt, .md — read as UTF-8
+          // .txt / .md — plain UTF-8
           text = buffer.toString("utf-8").trim();
         }
       } catch (e: unknown) {
@@ -77,9 +89,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (parsed.length === 0) {
-      const detail = errors.length > 0 ? ` (${errors[0]})` : "";
+      const detail = errors.length > 0 ? `: ${errors[0]}` : "";
       return NextResponse.json(
-        { error: `Could not extract text from the file${detail}. Try saving it as a .txt file and uploading again.` },
+        { error: `Could not read the file${detail}. Try saving it as a .txt file and uploading again.` },
         { status: 400 }
       );
     }
