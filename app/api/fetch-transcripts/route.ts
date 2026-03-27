@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export interface TranscriptResult {
   id: string;
@@ -134,13 +134,13 @@ export async function POST(req: NextRequest) {
     const { videos } = (await req.json()) as { videos: { id: string; title: string }[] };
     if (!videos?.length) return NextResponse.json({ error: "No videos provided." }, { status: 400 });
 
-    // Try up to 6 videos to collect 3 successes
-    const candidates = videos.slice(0, 6);
+    // Try up to 10 videos to collect 5 successes (more data = better style analysis)
+    const candidates = videos.slice(0, 10);
     const transcripts: TranscriptResult[] = [];
     const failed: { id: string; reason: string }[] = [];
 
     for (const video of candidates) {
-      if (transcripts.length >= 3) break;
+      if (transcripts.length >= 5) break;
 
       // 1s gap between requests to avoid triggering rate limits
       if (transcripts.length + failed.length > 0) {

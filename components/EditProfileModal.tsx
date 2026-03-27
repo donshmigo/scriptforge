@@ -147,6 +147,18 @@ export default function EditProfileModal({
   const [profileDocLoading, setProfileDocLoading] = useState(false);
   const profileDocFileRef = useRef<HTMLInputElement>(null);
 
+  // YouTube import for Who Am I
+  const [ytIdentityLoading, setYtIdentityLoading] = useState(false);
+  const [ytIdentityStatus, setYtIdentityStatus] = useState("");
+  const [showYtIdentityInput, setShowYtIdentityInput] = useState(false);
+  const [ytIdentityUrl, setYtIdentityUrl] = useState(channelUrl);
+
+  // YouTube import for My Style
+  const [ytStyleLoading, setYtStyleLoading] = useState(false);
+  const [ytStyleStatus, setYtStyleStatus] = useState("");
+  const [showYtStyleInput, setShowYtStyleInput] = useState(false);
+  const [ytStyleUrl, setYtStyleUrl] = useState(channelUrl);
+
   // Upload errors (per-tab)
   const [whoAmIUploadError, setWhoAmIUploadError] = useState("");
   const [styleUploadError, setStyleUploadError] = useState("");
@@ -431,6 +443,148 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
     }
   }, [setStyleError]);
 
+  // ── YouTube → Who Am I: scrape channel + transcripts → analyze identity ──
+  const handleYouTubeIdentity = useCallback(async () => {
+    const url = ytIdentityUrl.trim();
+    if (!url) return;
+    setYtIdentityLoading(true);
+    setYtIdentityStatus("Scraping channel…");
+    setWhoAmIUploadError("");
+    try {
+      // 1. Scrape channel
+      const scrapeRes = await fetch("/api/scrape-channel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelUrl: url, apiKey: "" }),
+      });
+      let scrapeData: any;
+      try { scrapeData = await scrapeRes.json(); } catch { throw new Error("Channel request timed out."); }
+      if (!scrapeRes.ok) throw new Error(scrapeData.error || "Could not scrape channel.");
+
+      const videos = (scrapeData.videos ?? []) as { id: string; title: string }[];
+      if (videos.length === 0) throw new Error("No videos found on this channel.");
+
+      // 2. Fetch transcripts
+      setYtIdentityStatus(`Fetching transcripts from ${videos.length} videos…`);
+      const transRes = await fetch("/api/fetch-transcripts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videos }),
+      });
+      let transData: any;
+      try { transData = await transRes.json(); } catch { throw new Error("Transcript request timed out."); }
+      if (!transRes.ok) throw new Error(transData.error || "Transcript fetch failed.");
+
+      const transcripts = transData.transcripts ?? [];
+      if (transcripts.length === 0) throw new Error("No transcripts available for these videos.");
+
+      // 3. Analyze identity from transcripts
+      setYtIdentityStatus("Analyzing creator identity…");
+      const analyzeRes = await fetch("/api/analyze-channel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcripts }),
+      });
+      let analyzeData: any;
+      try { analyzeData = await analyzeRes.json(); } catch { throw new Error("Analysis timed out."); }
+      if (!analyzeRes.ok) throw new Error(analyzeData.error || "Analysis failed.");
+
+      // 4. Format identity as a readable document
+      const id = analyzeData.identity ?? {};
+      const parts: string[] = [];
+      if (id.name) parts.push(`# ${id.name}`);
+      if (id.credibilityStack) parts.push(`## Credentials & Proof\n${id.credibilityStack}`);
+      if (id.uniqueMethod) parts.push(`## Unique Method\n${id.uniqueMethod}`);
+      if (id.contraryBelief) parts.push(`## Contrarian Belief\n${id.contraryBelief}`);
+      if (id.targetPerson) parts.push(`## Target Audience\n${id.targetPerson}`);
+      if (id.contentStyle) parts.push(`## Content Style\n${id.contentStyle}`);
+
+      const doc = parts.join("\n\n");
+      setProfileDoc(doc);
+
+      // Also update the structured fields
+      if (id.name) setName(id.name);
+      if (id.credibilityStack) setCredibilityStack(id.credibilityStack);
+      if (id.uniqueMethod) setUniqueMethod(id.uniqueMethod);
+      if (id.contraryBelief) setContraryBelief(id.contraryBelief);
+      if (id.targetPerson) setTargetPerson(id.targetPerson);
+      if (id.contentStyle) setContentStyle(id.contentStyle);
+      setChannelUrl(url);
+
+      setYtIdentityStatus(`Done — identity extracted from ${transcripts.length} transcript${transcripts.length !== 1 ? "s" : ""}`);
+      setShowYtIdentityInput(false);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "YouTube import failed.";
+      setWhoAmIUploadError(msg);
+      setYtIdentityStatus("");
+    } finally {
+      setYtIdentityLoading(false);
+    }
+  }, [ytIdentityUrl]);
+
+  // ── YouTube → My Style: scrape channel + transcripts → forensic analysis ──
+  const handleYouTubeStyle = useCallback(async () => {
+    const url = ytStyleUrl.trim();
+    if (!url) return;
+    setYtStyleLoading(true);
+    setYtStyleStatus("Scraping channel…");
+    setStyleUploadError("");
+    try {
+      // 1. Scrape channel
+      const scrapeRes = await fetch("/api/scrape-channel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channelUrl: url, apiKey: "" }),
+      });
+      let scrapeData: any;
+      try { scrapeData = await scrapeRes.json(); } catch { throw new Error("Channel request timed out."); }
+      if (!scrapeRes.ok) throw new Error(scrapeData.error || "Could not scrape channel.");
+
+      const videos = (scrapeData.videos ?? []) as { id: string; title: string }[];
+      if (videos.length === 0) throw new Error("No videos found on this channel.");
+
+      // 2. Fetch transcripts
+      setYtStyleStatus(`Fetching transcripts from ${videos.length} videos…`);
+      const transRes = await fetch("/api/fetch-transcripts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videos }),
+      });
+      let transData: any;
+      try { transData = await transRes.json(); } catch { throw new Error("Transcript request timed out."); }
+      if (!transRes.ok) throw new Error(transData.error || "Transcript fetch failed.");
+
+      const transcripts = transData.transcripts ?? [];
+      if (transcripts.length === 0) throw new Error("No transcripts available for these videos.");
+
+      // 3. Run forensic style analysis
+      setYtStyleStatus(`Analyzing writing style from ${transcripts.length} transcript${transcripts.length !== 1 ? "s" : ""}…`);
+      const analyzeRes = await fetch("/api/analyze-style", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scripts: transcripts.map((t: any) => ({ name: t.title, text: t.text })),
+          apiKey,
+        }),
+      });
+      let analyzeData: any;
+      try { analyzeData = await analyzeRes.json(); } catch { throw new Error("Analysis timed out."); }
+      if (!analyzeRes.ok) throw new Error(analyzeData.error || "Style analysis failed.");
+
+      setStyleText(analyzeData.analysis ?? "");
+      setChannelUrl(url);
+
+      setYtStyleStatus(`Done — style extracted from ${transcripts.length} transcript${transcripts.length !== 1 ? "s" : ""}`);
+      setShowYtStyleInput(false);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "YouTube import failed.";
+      setStyleUploadError(msg);
+      setYtStyleStatus("");
+    } finally {
+      setYtStyleLoading(false);
+    }
+  }, [ytStyleUrl, apiKey]);
+
   const handleAiUpdate = useCallback(async (
     guideType: "introGuide" | "scriptGuide" | "whoAmI" | "whoAmIDoc" | "styleDoc",
     currentContent: unknown,
@@ -588,11 +742,11 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                     <button
                       type="button"
                       onClick={() => profileDocFileRef.current?.click()}
-                      disabled={profileDocLoading}
+                      disabled={profileDocLoading || ytIdentityLoading}
                       className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
                       style={{ background: "rgba(255,78,80,0.08)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.25)" }}
                     >
-                      {profileDocLoading ? "Uploading…" : "Upload .pdf / .docx / .txt"}
+                      {profileDocLoading ? "Uploading…" : "Upload"}
                     </button>
                     <input
                       ref={profileDocFileRef}
@@ -601,9 +755,60 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                       className="hidden"
                       onChange={(e) => handleGuideFileUpload(e.target.files, setProfileDoc, setProfileDocLoading, setWhoAmIUploadError)}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowYtIdentityInput(!showYtIdentityInput)}
+                      disabled={ytIdentityLoading || profileDocLoading}
+                      className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+                      style={{ background: "rgba(255,0,0,0.06)", color: "#c00", border: "1px solid rgba(255,0,0,0.2)" }}
+                    >
+                      {ytIdentityLoading ? "Importing…" : "From YouTube"}
+                    </button>
                   </div>
                 </div>
               </div>
+
+              {/* YouTube channel URL input for Who Am I */}
+              {(showYtIdentityInput || ytIdentityLoading) && (
+                <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(255,0,0,0.03)", border: "1px solid rgba(255,0,0,0.15)" }}>
+                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
+                    Import identity from YouTube channel
+                  </p>
+                  <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>
+                    We'll fetch recent video transcripts and extract your creator identity automatically.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={ytIdentityUrl}
+                      onChange={(e) => setYtIdentityUrl(e.target.value)}
+                      placeholder="youtube.com/@yourchannel"
+                      disabled={ytIdentityLoading}
+                      className="flex-1 rounded-lg px-3 py-2 text-sm outline-none"
+                      style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !ytIdentityLoading) handleYouTubeIdentity(); }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleYouTubeIdentity}
+                      disabled={ytIdentityLoading || !ytIdentityUrl.trim()}
+                      className="text-xs px-4 py-2 rounded-lg font-semibold disabled:opacity-40 flex items-center gap-2"
+                      style={{ background: "#c00", color: "#fff" }}
+                    >
+                      {ytIdentityLoading
+                        ? <><span className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />Importing…</>
+                        : "Import"}
+                    </button>
+                  </div>
+                  {ytIdentityStatus && (
+                    <p className="text-xs" style={{ color: ytIdentityStatus.startsWith("Done") ? "var(--green)" : "var(--muted)" }}>
+                      {ytIdentityStatus}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <textarea
                 value={profileDoc}
@@ -699,11 +904,11 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                     <button
                       type="button"
                       onClick={() => styleTextFileRef.current?.click()}
-                      disabled={styleUploadLoading}
+                      disabled={styleUploadLoading || ytStyleLoading}
                       className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
                       style={{ background: "rgba(255,78,80,0.08)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.25)" }}
                     >
-                      {styleUploadLoading ? "Uploading…" : "Upload .pdf / .docx / .txt"}
+                      {styleUploadLoading ? "Uploading…" : "Upload"}
                     </button>
                     <input
                       ref={styleTextFileRef}
@@ -712,9 +917,60 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                       className="hidden"
                       onChange={(e) => handleGuideFileUpload(e.target.files, setStyleText, setStyleUploadLoading, setStyleUploadError)}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowYtStyleInput(!showYtStyleInput)}
+                      disabled={ytStyleLoading || styleUploadLoading}
+                      className="text-xs px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+                      style={{ background: "rgba(255,0,0,0.06)", color: "#c00", border: "1px solid rgba(255,0,0,0.2)" }}
+                    >
+                      {ytStyleLoading ? "Importing…" : "From YouTube"}
+                    </button>
                   </div>
                 </div>
               </div>
+
+              {/* YouTube channel URL input for My Style */}
+              {(showYtStyleInput || ytStyleLoading) && (
+                <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(255,0,0,0.03)", border: "1px solid rgba(255,0,0,0.15)" }}>
+                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
+                    Import writing style from YouTube channel
+                  </p>
+                  <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>
+                    We'll fetch recent video transcripts and run a forensic style analysis to extract your writing DNA.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={ytStyleUrl}
+                      onChange={(e) => setYtStyleUrl(e.target.value)}
+                      placeholder="youtube.com/@yourchannel"
+                      disabled={ytStyleLoading}
+                      className="flex-1 rounded-lg px-3 py-2 text-sm outline-none"
+                      style={{ background: "var(--surface-2)", color: "var(--foreground)", border: "1px solid var(--border)" }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !ytStyleLoading) handleYouTubeStyle(); }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleYouTubeStyle}
+                      disabled={ytStyleLoading || !ytStyleUrl.trim()}
+                      className="text-xs px-4 py-2 rounded-lg font-semibold disabled:opacity-40 flex items-center gap-2"
+                      style={{ background: "#c00", color: "#fff" }}
+                    >
+                      {ytStyleLoading
+                        ? <><span className="w-3 h-3 rounded-full border-2 border-white/30 border-t-white animate-spin" />Analyzing…</>
+                        : "Analyze"}
+                    </button>
+                  </div>
+                  {ytStyleStatus && (
+                    <p className="text-xs" style={{ color: ytStyleStatus.startsWith("Done") ? "var(--green)" : "var(--muted)" }}>
+                      {ytStyleStatus}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <textarea
                 value={styleText}
