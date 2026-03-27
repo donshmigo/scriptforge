@@ -476,7 +476,10 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
       if (!transRes.ok) throw new Error(transData.error || "Transcript fetch failed.");
 
       const transcripts = transData.transcripts ?? [];
-      if (transcripts.length === 0) throw new Error("No transcripts available for these videos.");
+      if (transcripts.length === 0) {
+        const reasons = (transData.failed ?? []).map((f: any) => `${f.title || f.id}: ${f.reason}`).join("\n");
+        throw new Error(`No transcripts available.${reasons ? `\n${reasons}` : ""}`);
+      }
 
       // 3. Analyze identity from transcripts
       setYtIdentityStatus("Analyzing creator identity…");
@@ -555,7 +558,10 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
       if (!transRes.ok) throw new Error(transData.error || "Transcript fetch failed.");
 
       const transcripts = transData.transcripts ?? [];
-      if (transcripts.length === 0) throw new Error("No transcripts available for these videos.");
+      if (transcripts.length === 0) {
+        const reasons = (transData.failed ?? []).map((f: any) => `${f.title || f.id}: ${f.reason}`).join("\n");
+        throw new Error(`No transcripts available.${reasons ? `\n${reasons}` : ""}`);
+      }
 
       // 3. Run forensic style analysis
       setYtStyleStatus(`Analyzing writing style from ${transcripts.length} transcript${transcripts.length !== 1 ? "s" : ""}…`);
