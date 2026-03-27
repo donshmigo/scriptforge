@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { withRetry } from "@/lib/openai-retry";
 
-export const runtime = "edge";
 export const maxDuration = 60;
 
 export interface ScrapedVideo {
@@ -22,6 +21,18 @@ export interface ScrapeResult {
   };
 }
 
+// Consent cookies to bypass YouTube's EU/regional consent wall on serverless
+const CONSENT_COOKIES =
+  "SOCS=CAESEwgDEgk2ODE4MTAyNjQaAmVuIAEaBgiA_LyaBg; CONSENT=PENDING+987";
+
+const YT_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "Accept-Language": "en-US,en;q=0.9",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  Cookie: CONSENT_COOKIES,
+};
+
 export async function POST(req: NextRequest) {
   try {
     const { channelUrl, apiKey } = await req.json();
@@ -38,14 +49,7 @@ export async function POST(req: NextRequest) {
     if (!url.startsWith("http")) url = "https://" + url;
 
     // Fetch channel page
-    const pageRes = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-    });
+    const pageRes = await fetch(url, { headers: YT_HEADERS });
 
     if (!pageRes.ok) {
       const hint = pageRes.status === 404
@@ -93,12 +97,7 @@ export async function POST(req: NextRequest) {
 
     const videosTabUrl = url.replace(/\/?$/, "/videos");
     try {
-      const vtRes = await fetch(videosTabUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          "Accept-Language": "en-US,en;q=0.9",
-        },
-      });
+      const vtRes = await fetch(videosTabUrl, { headers: YT_HEADERS });
 
       if (vtRes.ok) {
         const vtHtml = await vtRes.text();

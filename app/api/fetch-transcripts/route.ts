@@ -17,82 +17,15 @@ export interface FetchTranscriptsResponse {
 const BROWSER_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
-// YouTube InnerTube API client — same API the YouTube website uses internally
-const INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
-const INNERTUBE_CONTEXT = {
-  client: {
-    hl: "en",
-    gl: "US",
-    clientName: "WEB",
-    clientVersion: "2.20241126.01.00",
-  },
+// Consent cookies to bypass YouTube's EU/regional consent wall on serverless
+const CONSENT_COOKIES =
+  "SOCS=CAESEwgDEgk2ODE4MTAyNjQaAmVuIAEaBgiA_LyaBg; CONSENT=PENDING+987";
+
+const YT_HEADERS = {
+  "User-Agent": BROWSER_UA,
+  "Accept-Language": "en-US,en;q=0.9",
+  Cookie: CONSENT_COOKIES,
 };
-
-/** Fetch the watch page and extract the serialized player response to get caption track URLs */
-async function getCaptionTracksFromPage(videoId: string): Promise<
-  { baseUrl: string; languageCode: string; kind?: string }[]
-> {
-  const res = await fetch(`https://www.youtube.com/watch?v=${videoId}&hl=en`, {
-    headers: {
-      "User-Agent": BROWSER_UA,
-      "Accept-Language": "en-US,en;q=0.9",
-      Accept: "text/html",
-    },
-  });
-  if (!res.ok) throw new Error(`Watch page HTTP ${res.status}`);
-  const html = await res.text();
-
-  // Try multiple markers YouTube uses
-  for (const marker of [
-    "ytInitialPlayerResponse = ",
-    "var ytInitialPlayerResponse = ",
-  ]) {
-    const idx = html.indexOf(marker);
-    if (idx === -1) continue;
-
-    let depth = 0;
-    let i = idx + marker.length;
-    const start = i;
-    for (; i < html.length; i++) {
-      if (html[i] === "{") depth++;
-      else if (html[i] === "}") {
-        depth--;
-        if (depth === 0) { i++; break; }
-      }
-    }
-
-    try {
-      const data = JSON.parse(html.slice(start, i));
-      const tracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-      if (tracks?.length) return tracks;
-    } catch { /* try next marker */ }
-  }
-
-  return [];
-}
-
-/** Use YouTube InnerTube API /player endpoint to get caption tracks */
-async function getCaptionTracksFromAPI(videoId: string): Promise<
-  { baseUrl: string; languageCode: string; kind?: string }[]
-> {
-  const res = await fetch(
-    `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "User-Agent": BROWSER_UA,
-      },
-      body: JSON.stringify({
-        context: INNERTUBE_CONTEXT,
-        videoId,
-      }),
-    }
-  );
-  if (!res.ok) throw new Error(`InnerTube player API HTTP ${res.status}`);
-  const data = await res.json();
-  return data?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-}
 
 function decodeEntities(str: string): string {
   return str
@@ -146,25 +79,70 @@ function toText(lines: { offsetMs: number; text: string }[]): string {
   return paras.map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean).join("\n\n");
 }
 
-async function fetchTranscript(video: { id: string; title: string }): Promise<TranscriptResult> {
-  // Try InnerTube API first (more reliable from servers), fall back to page scrape
-  let tracks: { baseUrl: string; languageCode: string; kind?: string }[] = [];
+/** Extract caption tracks from the watch page HTML */
+function extractCaptionTracks(html: string): { baseUrl: string; languageCode: string; kind?: string }[] {
+  for (const marker of [
+    "ytInitialPlayerResponse = ",
+    "var ytInitialPlayerResponse = ",
+  ]) {
+    const idx = html.indexOf(marker);
+    if (idx === -1) continue;
 
-  try {
-    tracks = await getCaptionTracksFromAPI(video.id);
-  } catch {
-    // fallback
-  }
-
-  if (tracks.length === 0) {
-    try {
-      tracks = await getCaptionTracksFromPage(video.id);
-    } catch {
-      // fallback failed too
+    let depth = 0;
+    let i = idx + marker.length;
+    const start = i;
+    for (; i < html.length; i++) {
+      if (html[i] === "{") depth++;
+      else if (html[i] === "}") {
+        depth--;
+        if (depth === 0) { i++; break; }
+      }
     }
+
+    try {
+      const data = JSON.parse(html.slice(start, i));
+      const tracks = data?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+      if (tracks?.length) return tracks;
+    } catch { /* try next marker */ }
   }
 
-  if (tracks.length === 0) throw new Error("No caption tracks found");
+  // Fallback: regex extraction of captionTracks JSON array
+  const m = html.match(/"captionTracks":(\[.*?\])/s);
+  if (m?.[1]) {
+    try {
+      // YouTube escapes URLs with \u0026 — JSON.parse handles that
+      const tracks = JSON.parse(m[1]);
+      if (tracks?.length) return tracks;
+    } catch { /* ignore */ }
+  }
+
+  return [];
+}
+
+async function fetchTranscript(video: { id: string; title: string }): Promise<TranscriptResult> {
+  // Fetch watch page with consent cookies to bypass regional consent wall
+  const watchRes = await fetch(
+    `https://www.youtube.com/watch?v=${video.id}&hl=en`,
+    { headers: { ...YT_HEADERS, Accept: "text/html" } }
+  );
+  if (!watchRes.ok) throw new Error(`Watch page HTTP ${watchRes.status}`);
+
+  const html = await watchRes.text();
+
+  // Check if we got a consent redirect instead of the real page
+  if (html.includes("consent.youtube.com") && !html.includes("ytInitialPlayerResponse")) {
+    throw new Error("Consent wall — cookies not accepted");
+  }
+
+  const tracks = extractCaptionTracks(html);
+  if (tracks.length === 0) {
+    // Include diagnostic info
+    const hasPlayerResponse = html.includes("ytInitialPlayerResponse");
+    const hasCaptions = html.includes("captionTracks");
+    throw new Error(
+      `No caption tracks (playerResponse=${hasPlayerResponse}, captionTracks=${hasCaptions}, htmlLen=${html.length})`
+    );
+  }
 
   // Prefer manual English captions over auto-generated
   const track =
@@ -174,12 +152,12 @@ async function fetchTranscript(video: { id: string; title: string }): Promise<Tr
     tracks.find((t) => t.languageCode?.startsWith("en")) ??
     tracks[0];
 
-  // Fetch caption XML (try both srv3 and srv1)
-  for (const fmt of ["srv3", "srv1"]) {
+  // Fetch caption XML — try srv1 first (most widely supported), then srv3
+  for (const fmt of ["srv1", "srv3"]) {
     const sep = track.baseUrl.includes("?") ? "&" : "?";
     const capUrl = `${track.baseUrl}${sep}fmt=${fmt}`;
 
-    const capRes = await fetch(capUrl, { headers: { "User-Agent": BROWSER_UA } });
+    const capRes = await fetch(capUrl, { headers: YT_HEADERS });
     if (!capRes.ok) continue;
 
     const xml = await capRes.text();
@@ -197,7 +175,7 @@ async function fetchTranscript(video: { id: string; title: string }): Promise<Tr
     };
   }
 
-  throw new Error("Captions found but could not parse content");
+  throw new Error("Caption tracks found but could not parse content");
 }
 
 export async function POST(req: NextRequest) {
