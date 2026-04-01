@@ -1055,10 +1055,15 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
             const uploading = isIntro ? introGuideUploading : scriptGuideUploading;
             const setUploading = isIntro ? setIntroGuideUploading : setScriptGuideUploading;
             const fileRef = isIntro ? introGuideFileRef : scriptGuideFileRef;
+            const isCustomStyle = personaId === "custom";
             const docName = isIntro ? "Thomas_Graham_How_To_Write_An_Introduction.docx" : "Thomas_Graham_How_To_Write_A_Script.docx";
             const placeholder = isIntro
-              ? "Paste your intro writing guide here, or upload the .docx file.\n\nThis tells the AI exactly how to structure every introduction — beats, modes, USP stacking, and what to never write."
-              : "Paste your script writing guide here, or upload the .docx file.\n\nThis tells the AI how to structure the body, place rehooks, handle story flow, write the outro, and embed CTAs.";
+              ? isCustomStyle
+                ? "Write your intro guide here.\n\nTell the AI exactly how you want every introduction structured — beats, opening approach, length, what to always/never include."
+                : "Paste your intro writing guide here, or upload the .docx file.\n\nThis tells the AI exactly how to structure every introduction — beats, modes, USP stacking, and what to never write."
+              : isCustomStyle
+                ? "Write your script guide here.\n\nTell the AI how to structure the body, where to place re-hooks, how to handle story flow, write the outro, and embed CTAs."
+                : "Paste your script writing guide here, or upload the .docx file.\n\nThis tells the AI how to structure the body, place rehooks, handle story flow, write the outro, and embed CTAs.";
             const governs = isIntro ? "Intro beats, modes, USP" : "Body, rehooks, story flow, outro, CTAs";
 
             return (
@@ -1123,14 +1128,18 @@ const handleProfileDocUpload = useCallback(async (files: FileList | null) => {
                     <span style={{ color: "var(--border-light)" }}>·</span>
                     <span>AI will use this guide for every script</span>
                   </div>
+                ) : isCustomStyle ? (
+                  <div className="rounded-xl px-4 py-3 text-xs leading-5" style={{ background: "var(--accent-glow)", color: "var(--muted)", border: "1px solid rgba(255,78,80,0.2)" }}>
+                    <strong style={{ color: "var(--accent)" }}>No guide yet.</strong> This is your blank canvas — write your own {isIntro ? "intro structure" : "script structure"} above. The AI will follow it for every script you generate.
+                  </div>
                 ) : (
-                  <div className="rounded-xl px-4 py-3 text-xs leading-5" style={{ background: "rgba(124,92,252,0.06)", color: "var(--muted)", border: "1px solid rgba(124,92,252,0.15)" }}>
+                  <div className="rounded-xl px-4 py-3 text-xs leading-5" style={{ background: "var(--accent-glow)", color: "var(--muted)", border: "1px solid rgba(255,78,80,0.2)" }}>
                     <strong style={{ color: "var(--accent)" }}>Using default framework.</strong> Upload <code style={{ background: "var(--surface)", padding: "0 3px", borderRadius: 3 }}>{docName}</code> to override with your custom guide.
                   </div>
                 )}
 
                 {/* AI feedback panel */}
-                <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(124,92,252,0.05)", border: "1px solid rgba(124,92,252,0.2)" }}>
+                <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: "rgba(255,78,80,0.04)", border: "1px solid rgba(255,78,80,0.15)" }}>
                   <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: "var(--accent)" }}>Refine with AI</p>
                   <p className="text-xs leading-4" style={{ color: "var(--muted)" }}>
                     Describe what to change and the AI will update the guide document automatically.

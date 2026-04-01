@@ -105,6 +105,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Video title is required." }, { status: 400 });
     }
 
+    // Custom style requires at least one guide to be configured
+    if (personaId === "custom") {
+      const hasStyleGuide   = !!(body.styleAnalysis?.trim());
+      const hasIntroGuide   = !!(body.introGuide?.trim());
+      const hasScriptGuide  = !!(body.scriptGuide?.trim());
+      if (!hasStyleGuide && !hasIntroGuide && !hasScriptGuide) {
+        return NextResponse.json(
+          { error: "Your Custom style has no guides set up yet. Open Edit Profile and add a Style Guide, Intro Guide, or Script Guide so the AI knows how to write your scripts." },
+          { status: 400 }
+        );
+      }
+    }
+
     const useAnthropic = !!resolvedAnthropicKey;
     const isReels = platform === "reels";
     const lengthTable = isReels ? REELS_LENGTH_TARGETS : YOUTUBE_LENGTH_TARGETS;
@@ -444,20 +457,93 @@ Return the complete revised script now:`
     return NextResponse.json({ script, hookAlternatives });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+    const lower = message.toLowerCase();
 
-    if (message.includes("401") || message.includes("Incorrect API key")) {
+    // Auth / key problems
+    if (
+      message.includes("401") ||
+      lower.includes("incorrect api key") ||
+      lower.includes("invalid api key") ||
+      lower.includes("authentication") ||
+      lower.includes("unauthorized")
+    ) {
       return NextResponse.json(
-        { error: "Invalid API key. Please check your API key in Edit Profile." },
+        { error: "Your API key is invalid or expired. Double-check it in Edit Profile → API Keys." },
         { status: 401 }
       );
     }
-    if (message.includes("429")) {
+
+    // Billing / quota exhausted
+    if (
+      message.includes("402") ||
+      lower.includes("quota") ||
+      lower.includes("billing") ||
+      lower.includes("insufficient_quota") ||
+      lower.includes("credit") ||
+      lower.includes("payment")
+    ) {
       return NextResponse.json(
-        { error: "Rate limit exceeded. Please wait a moment and try again." },
+        { error: "Your API account has run out of credits. Top up your account at the provider's website and try again." },
+        { status: 402 }
+      );
+    }
+
+    // Rate limit
+    if (message.includes("429") || lower.includes("rate limit") || lower.includes("too many requests")) {
+      return NextResponse.json(
+        { error: "You're sending requests too quickly. Wait 30 seconds and try again." },
         { status: 429 }
       );
     }
 
-    return NextResponse.json({ error: message }, { status: 500 });
+    // Input too long / context window exceeded
+    if (
+      lower.includes("context_length_exceeded") ||
+      lower.includes("maximum context") ||
+      lower.includes("too many tokens") ||
+      lower.includes("prompt is too long") ||
+      lower.includes("reduce the length")
+    ) {
+      return NextResponse.json(
+        { error: "Your inputs are too long for the AI to process. Try shortening your reference material, profile, or script guide and generate again." },
+        { status: 400 }
+      );
+    }
+
+    // Model overloaded / capacity
+    if (
+      lower.includes("overloaded") ||
+      lower.includes("capacity") ||
+      lower.includes("service unavailable") ||
+      message.includes("529") ||
+      message.includes("503")
+    ) {
+      return NextResponse.json(
+        { error: "The AI service is under heavy load right now. Wait 30–60 seconds and try again." },
+        { status: 503 }
+      );
+    }
+
+    // Permission / model access
+    if (message.includes("403") || lower.includes("permission") || lower.includes("not allowed") || lower.includes("access denied")) {
+      return NextResponse.json(
+        { error: "Your API key doesn't have access to the required model. Check your account plan at the provider's website." },
+        { status: 403 }
+      );
+    }
+
+    // Timeout
+    if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("econnreset") || lower.includes("aborted")) {
+      return NextResponse.json(
+        { error: "The generation took too long and timed out. Try a shorter script length or simplify your inputs." },
+        { status: 504 }
+      );
+    }
+
+    // Fallback — don't expose raw SDK stack traces
+    return NextResponse.json(
+      { error: "Something went wrong while generating your script. Please try again, and if it keeps happening, check your API key in Edit Profile." },
+      { status: 500 }
+    );
   }
 }

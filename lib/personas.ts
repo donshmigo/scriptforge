@@ -164,9 +164,38 @@ const PRODUCT_REVIEW: WritingStyle = {
   scriptGuide: PRODUCT_REVIEW_SCRIPT_GUIDE,
 };
 
+// ─── Custom ───────────────────────────────────────────────────────────────────
+// Blank-slate style — the user defines every guide themselves.
+// No pre-loaded style guide, intro guide, or script guide.
+// All content comes entirely from the user's own configuration via Edit Profile.
+
+const CUSTOM: WritingStyle = {
+  id: "custom",
+  name: "Custom",
+  tagline: "Your rules. Your structure. Fully yours.",
+  description: "A blank canvas — no pre-loaded guides. You write the style guide, intro rules, and script structure yourself. Best for creators who have a specific format they want to enforce.",
+  avatar: "CU",
+  color: "#FF4E50",
+  available: true,
+  contentType: "Custom",
+  identity: {
+    name: "",
+    channelUrl: "",
+    credibilityStack: "",
+    uniqueMethod: "",
+    contraryBelief: "",
+    targetPerson: "",
+    contentStyle: "talking-head",
+  },
+  styleGuide: "",
+  introGuide: "",
+  scriptGuide: "",
+  reelsGuide: "",
+};
+
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
-export const WRITING_STYLES: WritingStyle[] = [THOMAS, BEST_OF, PRODUCT_REVIEW];
+export const WRITING_STYLES: WritingStyle[] = [THOMAS, BEST_OF, PRODUCT_REVIEW, CUSTOM];
 
 export const DEFAULT_STYLE_ID = "thomas";
 

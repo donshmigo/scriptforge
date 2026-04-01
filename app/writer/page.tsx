@@ -359,33 +359,38 @@ export default function Home() {
     setSelectedHookIdx(-1);
 
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          platform,
-          reelType: platform === "reels" ? reelType : undefined,
-          videoTitle,
-          videoIdea,
-          userIntro,
-          referenceInfo,
-          subheadings,
-          scriptLength,
-          styleAnalysis: styleProfile?.analysis ?? "",
-          scriptSamples: (styleProfile?.scripts ?? [])
-            .filter((s) => s.sample)
-            .slice(0, 3)
-            .map((s) => ({ name: s.name, sample: s.sample })),
-          creatorProfile,
-          introGuide,
-          scriptGuide,
-          personaId,
-          apiKey,
-          anthropicApiKey,
-        }),
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            platform,
+            reelType: platform === "reels" ? reelType : undefined,
+            videoTitle,
+            videoIdea,
+            userIntro,
+            referenceInfo,
+            subheadings,
+            scriptLength,
+            styleAnalysis: styleProfile?.analysis ?? "",
+            scriptSamples: (styleProfile?.scripts ?? [])
+              .filter((s) => s.sample)
+              .slice(0, 3)
+              .map((s) => ({ name: s.name, sample: s.sample })),
+            creatorProfile,
+            introGuide,
+            scriptGuide,
+            personaId,
+            apiKey,
+            anthropicApiKey,
+          }),
+        });
+      } catch {
+        throw new Error("Couldn't reach the server. Check your internet connection and try again.");
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Generation failed.");
+      if (!res.ok) throw new Error(data.error || "Something went wrong while generating your script. Please try again.");
       setScript(data.script);
       if (data.hookAlternatives?.length) {
         setHookAlternatives(data.hookAlternatives);
@@ -393,7 +398,7 @@ export default function Home() {
       }
       setTimeout(() => outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -407,32 +412,37 @@ export default function Home() {
     setReviseError("");
 
     try {
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          platform,
-          videoTitle,
-          scriptLength,
-          styleAnalysis: styleProfile?.analysis ?? "",
-          scriptSamples: [],
-          creatorProfile,
-          personaId,
-          apiKey,
-          anthropicApiKey,
-          currentScript: script,
-          feedbackMessage: feedbackMessage.trim(),
-        }),
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            platform,
+            videoTitle,
+            scriptLength,
+            styleAnalysis: styleProfile?.analysis ?? "",
+            scriptSamples: [],
+            creatorProfile,
+            personaId,
+            apiKey,
+            anthropicApiKey,
+            currentScript: script,
+            feedbackMessage: feedbackMessage.trim(),
+          }),
+        });
+      } catch {
+        throw new Error("Couldn't reach the server. Check your internet connection and try again.");
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Revision failed.");
+      if (!res.ok) throw new Error(data.error || "Something went wrong while revising your script. Please try again.");
       setScript(data.script);
       setFeedbackMessage("");
       setHookAlternatives([]);
       setSelectedHookIdx(-1);
       setTimeout(() => outputRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     } catch (e: unknown) {
-      setReviseError(e instanceof Error ? e.message : "Something went wrong.");
+      setReviseError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {
       setReviseLoading(false);
     }
