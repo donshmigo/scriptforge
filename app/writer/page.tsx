@@ -6,6 +6,7 @@ import Onboarding from "@/components/Onboarding";
 import EditProfileModal from "@/components/EditProfileModal";
 import type { CreatorProfile, StyleProfile, PersonaProfile, WhoAmI } from "@/lib/types";
 import { WRITING_STYLES, DEFAULT_STYLE_ID, getWritingStyle } from "@/lib/personas";
+import { ENABLE_REELS } from "@/lib/flags";
 import { createClient } from "@/lib/supabase/client";
 import { getAllPersonaProfiles, upsertPersonaProfile } from "@/lib/supabase/profiles";
 
@@ -184,6 +185,11 @@ export default function Home() {
   // ── Variable inputs (per video) ───────────────────────────────────────────
   const [platform, setPlatform] = useState<Platform>("youtube");
   const [reelType, setReelType] = useState<ReelType>("educational");
+
+  // Reset to youtube if reels is disabled (e.g. user had "reels" in state from a prior session)
+  useEffect(() => {
+    if (!ENABLE_REELS && platform === "reels") setPlatform("youtube");
+  }, [platform]);
   const [videoTitle, setVideoTitle] = useState("");
   const [videoIdea, setVideoIdea] = useState("");
   const [referenceInfo, setReferenceInfo] = useState("");
@@ -999,7 +1005,8 @@ ${bodyHtml}
           {/* ── VARIABLE INPUTS ───────────────────────────────────────────── */}
           <div className="rounded-2xl border p-5 flex flex-col gap-5 animate-fade-in-up delay-2" style={{ borderColor: "var(--border)", background: "var(--surface)", boxShadow: "var(--shadow)" }}>
 
-            {/* Platform toggle */}
+            {/* Platform toggle — hidden in production when ENABLE_REELS is false */}
+            {ENABLE_REELS && (
             <div className="flex flex-col gap-2">
               <p className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--muted)", fontFamily: "var(--font-syne)" }}>Platform</p>
               <div className="grid grid-cols-2 gap-2">
@@ -1028,6 +1035,7 @@ ${bodyHtml}
                 })}
               </div>
             </div>
+            )}
 
             {/* Reel Type selector — only for Instagram/TikTok */}
             {platform === "reels" && (
