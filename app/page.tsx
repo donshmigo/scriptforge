@@ -142,7 +142,7 @@ export default function LandingPage() {
     },
     {
       q: "What are \u201cwriting styles\u201d?",
-      a: "Pre-built frameworks (e.g. Thomas Graham for education, Best Of for product roundups, Product Review) that define tone, structure, and rules. You can also use a custom style and feed in your own intro and script guides.",
+      a: "Pre-built frameworks (e.g. Educator for education, Product Comparison for product roundups, Product Review for single-product reviews, or Custom to write your own rules) that define tone, structure, and rules.",
     },
     {
       q: "Can I use this for Reels and TikTok?",
@@ -316,7 +316,7 @@ export default function LandingPage() {
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { n: "01", title: "Pick a writing style", body: "Education, Best Of, Product Review, or your own custom style. Each has its own proven tone and rules." },
+              { n: "01", title: "Pick a writing style", body: "Educator, Product Comparison, Product Review, or Custom. Each has its own proven tone and rules — or set up your own from scratch." },
               { n: "02", title: "Set your identity once", body: "Credibility stack, unique method, who you're for. The AI only uses what you add — never invents stats." },
               { n: "03", title: "Enter your topic", body: "Video title and angle. Optionally paste a hook or reference notes. Choose your target length." },
               { n: "04", title: "Generate & refine", body: "Get a full script. Use feedback to revise in-place. Swap hooks from alternatives if you want a different opener." },

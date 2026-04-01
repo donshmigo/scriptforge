@@ -68,10 +68,10 @@ export interface WritingStyle {
 
 const THOMAS: WritingStyle = {
   id: "thomas",
-  name: "Thomas Graham",
+  name: "Educator",
   tagline: "Calm authority. Proof-backed. Zero hype.",
   description: "Sophisticated ideas in plain language. One idea per sentence. Beat-driven intros (Proof → Promise → Bridge). Ascending value order. The smart friend who already figured it out.",
-  avatar: "TG",
+  avatar: "ED",
   color: "#6366f1",
   available: true,
   contentType: "Education",
@@ -114,13 +114,13 @@ More content does not equal more growth. More positioning clarity equals more gr
 
 const BEST_OF: WritingStyle = {
   id: "best-of",
-  name: "Best Of",
+  name: "Product Comparison",
   tagline: "Product comparisons. Structured sections. Verdict-driven.",
   description: "Purpose-built for 'Best X' comparison videos. Each product gets a structured section: positioning, standout feature, specs, demo walkthrough, honest limitation, and a clear verdict. Ascending value order. Prose only — never bullets.",
-  avatar: "BO",
+  avatar: "PC",
   color: "#10b981",
   available: true,
-  contentType: "Best Of",
+  contentType: "Product Comparison",
   identity: {
     name: "",
     channelUrl: "",
