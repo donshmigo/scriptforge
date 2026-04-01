@@ -184,14 +184,18 @@ export default function LandingPage() {
         }} />
         {/* Coral glow */}
         <div className="absolute inset-0 z-0" style={{
-          background: "radial-gradient(ellipse 60% 55% at 50% 40%, rgba(255,78,80,0.07) 0%, transparent 65%)"
+          background: "radial-gradient(ellipse 60% 55% at 50% 40%, rgba(255,78,80,0.09) 0%, transparent 65%)"
+        }} />
+        {/* Warm orange secondary glow */}
+        <div className="absolute inset-0 z-0" style={{
+          background: "radial-gradient(ellipse 40% 35% at 70% 60%, rgba(255,123,53,0.06) 0%, transparent 60%)"
         }} />
 
         <div className="relative z-10 w-full max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left: copy */}
           <div>
             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6 transition-all duration-500 ${heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}`} style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.2)" }}>
-              <span>✦</span>
+              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "var(--accent)" }} />
               <span>AI YouTube Script Generator</span>
             </div>
             <h1 className={`text-[2.8rem] sm:text-5xl lg:text-[3rem] xl:text-[3.5rem] font-extrabold tracking-tight mb-6 transition-all duration-600 delay-75 ${heroVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`} style={{ color: "var(--foreground)", fontFamily: FONT, lineHeight: 1.06 }}>
@@ -231,13 +235,15 @@ export default function LandingPage() {
 
       {/* ── Stats bar ───────────────────────────────────────────────── */}
       <div style={{ background: "var(--surface)", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
-        <div className="max-w-4xl mx-auto px-6 py-8 grid grid-cols-3 gap-6 text-center">
+        <div className="max-w-4xl mx-auto px-6 py-8 grid grid-cols-3 gap-4">
           {[
             { num: "< 1 min", label: "avg. script generation" },
             { num: "900+", label: "hook templates built-in" },
             { num: "4", label: "writing styles & formats" },
           ].map((stat) => (
-            <div key={stat.num}>
+            <div key={stat.num} className="card-lift rounded-2xl p-5 text-center relative overflow-hidden" style={{ background: "var(--surface-2)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
+              {/* Gradient top accent line */}
+              <div className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl" style={{ background: "linear-gradient(90deg, var(--accent), #FF7B35)" }} />
               <div className="text-2xl sm:text-3xl font-extrabold mb-1" style={{ color: "var(--accent)", fontFamily: FONT }}>{stat.num}</div>
               <div className="text-xs sm:text-sm" style={{ color: "var(--muted)" }}>{stat.label}</div>
             </div>
@@ -248,7 +254,9 @@ export default function LandingPage() {
       {/* ── Problem ─────────────────────────────────────────────────── */}
       <section ref={problemRef} className="relative py-24 md:py-32 px-6">
         <div className="max-w-5xl mx-auto">
-          <p className={`text-center text-xs font-bold uppercase tracking-[0.22em] mb-3 transition-all duration-500 ${problemVisible ? "opacity-100" : "opacity-0"}`} style={{ color: "var(--accent)" }}>The problem</p>
+          <div className={`flex justify-center mb-4 transition-all duration-500 ${problemVisible ? "opacity-100" : "opacity-0"}`}>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.2)" }}>The problem</span>
+          </div>
           <h2 className={`text-center text-3xl md:text-4xl font-bold mb-4 transition-all duration-600 delay-75 ${problemVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`} style={{ color: "var(--foreground)", fontFamily: FONT }}>
             Generic AI gives you generic scripts
           </h2>
@@ -257,7 +265,7 @@ export default function LandingPage() {
           </p>
           <div className={`grid md:grid-cols-2 gap-6 transition-all duration-600 delay-150 ${problemVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
             {/* Before */}
-            <div className="rounded-2xl p-6 border" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+            <div className="rounded-3xl p-6 border" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
               <div className="flex items-center gap-2 mb-5">
                 <span className="text-lg">😐</span>
                 <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Other AI — generic output</span>
@@ -274,7 +282,7 @@ export default function LandingPage() {
               </div>
             </div>
             {/* After */}
-            <div className="rounded-2xl p-6 border" style={{ background: "var(--surface)", borderColor: "rgba(255,78,80,0.2)", boxShadow: "var(--shadow)" }}>
+            <div className="rounded-3xl p-6 border" style={{ background: "var(--surface)", borderColor: "rgba(255,78,80,0.2)", boxShadow: "0 0 28px var(--accent-glow)" }}>
               <div className="flex items-center gap-2 mb-5">
                 <span className="text-lg">✨</span>
                 <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "var(--accent)" }}>ScriptForge — structured output</span>
@@ -300,7 +308,9 @@ export default function LandingPage() {
       {/* ── How it works ────────────────────────────────────────────── */}
       <section id="how" ref={howRef} className="relative py-24 md:py-32 px-6" style={{ background: "var(--surface)" }}>
         <div className="max-w-5xl mx-auto">
-          <p className={`text-center text-xs font-bold uppercase tracking-[0.22em] mb-3 transition-all duration-500 ${howVisible ? "opacity-100" : "opacity-0"}`} style={{ color: "var(--accent)" }}>How it works</p>
+          <div className={`flex justify-center mb-4 transition-all duration-500 ${howVisible ? "opacity-100" : "opacity-0"}`}>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.2)" }}>How it works</span>
+          </div>
           <h2 className={`text-center text-3xl md:text-4xl font-bold mb-16 transition-all duration-600 delay-75 ${howVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`} style={{ color: "var(--foreground)", fontFamily: FONT }}>
             Four steps to a script you can film today
           </h2>
@@ -312,7 +322,7 @@ export default function LandingPage() {
               { n: "04", title: "Generate & refine", body: "Get a full script. Use feedback to revise in-place. Swap hooks from alternatives if you want a different opener." },
             ].map((item, i) => (
               <div key={item.n} className={`card-lift rounded-2xl p-6 border transition-all duration-600 ${howVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`} style={{ borderColor: "var(--border)", background: "var(--surface-2)", transitionDelay: `${120 * i}ms` }}>
-                <div className="text-3xl font-extrabold mb-4" style={{ color: "var(--accent)", fontFamily: FONT, opacity: 0.25 }}>{item.n}</div>
+                <div className="inline-flex items-center justify-center w-9 h-9 rounded-xl text-sm font-extrabold mb-4" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.2)", fontFamily: FONT }}>{item.n}</div>
                 <h3 className="text-base font-bold mb-2" style={{ color: "var(--foreground)" }}>{item.title}</h3>
                 <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>{item.body}</p>
               </div>
@@ -332,16 +342,18 @@ export default function LandingPage() {
           </p>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { label: "Long-form", title: "YouTube", desc: "Intro beats (proof → promise → bridge), rehooks at section breaks, ascending value order. 6–8 min up to 15–20 min. Bold subheadings and one CTA.", icon: "▶", bg: "rgba(255,78,80,0.07)", color: "var(--accent)" },
-              { label: "Short-form", title: "Reels & TikTok", desc: "Hook → value → CTA. No wasted words, 6th-grade reading level. Pick format: educational, myth, list, step-by-step. 20 sec to 90 sec.", icon: "⚡", bg: "rgba(124,92,252,0.07)", color: "var(--accent-2)" },
-              { label: "No fabrications", title: "Your voice only", desc: "Fixed inputs for proof points, method, and audience. Optionally upload scripts to extract your style. We never invent numbers or stories.", icon: "🎯", bg: "rgba(0,201,167,0.07)", color: "var(--green)" },
+              { label: "Long-form", title: "YouTube", desc: "Intro beats (proof → promise → bridge), rehooks at section breaks, ascending value order. 6–8 min up to 15–20 min. Bold subheadings and one CTA.", icon: "▶" },
+              { label: "Short-form", title: "Reels & TikTok", desc: "Hook → value → CTA. No wasted words, 6th-grade reading level. Pick format: educational, myth, list, step-by-step. 20 sec to 90 sec.", icon: "⚡" },
+              { label: "No fabrications", title: "Your voice only", desc: "Fixed inputs for proof points, method, and audience. Optionally upload scripts to extract your style. We never invent numbers or stories.", icon: "🎯" },
             ].map((item, i) => (
               <div key={item.title} className={`card-lift rounded-2xl border overflow-hidden transition-all duration-600 ${featuresVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`} style={{ background: "var(--surface)", borderColor: "var(--border)", transitionDelay: `${100 * (i + 1)}ms` }}>
-                <div className="px-6 pt-7 pb-6" style={{ background: item.bg }}>
-                  <span className="text-2xl">{item.icon}</span>
+                <div className="px-6 pt-7 pb-6" style={{ background: "rgba(255,78,80,0.05)" }}>
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl" style={{ background: "var(--accent-glow)", border: "1px solid rgba(255,78,80,0.2)" }}>
+                    {item.icon}
+                  </div>
                 </div>
                 <div className="px-6 py-5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: item.color }}>{item.label}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "var(--accent)" }}>{item.label}</span>
                   <h3 className="text-xl font-bold mt-1 mb-3" style={{ color: "var(--foreground)" }}>{item.title}</h3>
                   <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>{item.desc}</p>
                 </div>
@@ -353,24 +365,33 @@ export default function LandingPage() {
 
       {/* ── Social proof ────────────────────────────────────────────── */}
       <section ref={proofRef} className="relative py-24 md:py-32 px-6" style={{ background: "var(--surface)" }}>
-        <div className="max-w-3xl mx-auto text-center">
-          <div className={`text-6xl font-black mb-2 transition-all duration-500 ${proofVisible ? "opacity-100" : "opacity-0"}`} style={{ color: "var(--accent)", fontFamily: FONT, lineHeight: 0.9 }}>&ldquo;</div>
-          <blockquote className={`transition-all duration-600 delay-75 ${proofVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
-            <p className="text-xl sm:text-2xl font-medium leading-relaxed mb-6" style={{ color: "var(--foreground)" }}>
-              I was spending 45 minutes on a script before. Now I get a solid first draft in under a minute and just tweak the bits that need my voice.
-            </p>
-            <footer className="text-sm" style={{ color: "var(--muted)" }}>
-              — Creator using ScriptForge for YouTube and Reels
-            </footer>
-          </blockquote>
+        <div className="max-w-3xl mx-auto">
+          <div className={`relative rounded-3xl p-10 md:p-14 overflow-hidden transition-all duration-600 ${proofVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`} style={{ background: "var(--surface-2)", border: "1px solid rgba(255,78,80,0.15)", boxShadow: "0 0 40px rgba(255,78,80,0.06)" }}>
+            {/* Dot grid overlay */}
+            <div className="absolute inset-0" style={{
+              backgroundImage: "radial-gradient(circle, rgba(255,78,80,0.06) 1px, transparent 1px)",
+              backgroundSize: "22px 22px"
+            }} />
+            <div className="relative z-10 text-center">
+              <div className="text-5xl font-black mb-3" style={{ color: "var(--accent)", fontFamily: FONT, lineHeight: 0.9 }}>&ldquo;</div>
+              <blockquote className={`transition-all duration-600 delay-75 ${proofVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
+                <p className="text-xl sm:text-2xl font-medium leading-relaxed mb-6" style={{ color: "var(--foreground)" }}>
+                  I was spending 45 minutes on a script before. Now I get a solid first draft in under a minute and just tweak the bits that need my voice.
+                </p>
+                <footer className="text-sm" style={{ color: "var(--muted)" }}>
+                  — Creator using ScriptForge for YouTube and Reels
+                </footer>
+              </blockquote>
+            </div>
+          </div>
           {/* Metric badges */}
-          <div className={`flex flex-wrap items-center justify-center gap-3 mt-10 transition-all duration-600 delay-150 ${proofVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
+          <div className={`flex flex-wrap items-center justify-center gap-3 mt-8 transition-all duration-600 delay-150 ${proofVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
             {[
               { label: "45 min → 4 min", sub: "script time" },
               { label: "900+ hooks", sub: "in the library" },
               { label: "0 invented stats", sub: "guaranteed" },
             ].map((b) => (
-              <div key={b.label} className="px-4 py-2.5 rounded-2xl text-center" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+              <div key={b.label} className="card-lift px-4 py-2.5 rounded-2xl text-center" style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
                 <div className="text-sm font-bold" style={{ color: "var(--foreground)", fontFamily: FONT }}>{b.label}</div>
                 <div className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>{b.sub}</div>
               </div>
@@ -389,7 +410,7 @@ export default function LandingPage() {
             See what actually makes ScriptForge different from a generic AI prompt.
           </p>
           <div className={`grid md:grid-cols-2 gap-6 transition-all duration-600 delay-100 ${diffVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`}>
-            <div className="rounded-2xl p-6 border" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
+            <div className="rounded-3xl p-6 border" style={{ background: "var(--surface-2)", borderColor: "var(--border)" }}>
               <div className="text-sm font-bold pb-3 mb-4 border-b" style={{ color: "var(--muted)", borderColor: "var(--border)" }}>Other AI Writers</div>
               {[
                 "Generates a generic wall of text",
@@ -403,7 +424,7 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <div className="rounded-2xl p-6 border" style={{ background: "var(--surface)", borderColor: "rgba(255,78,80,0.2)", boxShadow: "var(--shadow)" }}>
+            <div className="rounded-3xl p-6 border" style={{ background: "var(--surface)", borderColor: "rgba(255,78,80,0.2)", boxShadow: "0 0 28px var(--accent-glow)" }}>
               <div className="text-sm font-bold pb-3 mb-4 border-b" style={{ color: "var(--accent)", borderColor: "rgba(255,78,80,0.12)" }}>ScriptForge</div>
               {[
                 "Proven template: hook, rehooks, CTA",
@@ -424,7 +445,9 @@ export default function LandingPage() {
       {/* ── Free tools ──────────────────────────────────────────────── */}
       <section ref={toolsRef} className="relative py-24 md:py-32 px-6" style={{ background: "var(--surface)" }}>
         <div className="max-w-5xl mx-auto">
-          <p className={`text-center text-xs font-bold uppercase tracking-[0.22em] mb-3 transition-all duration-500 ${toolsVisible ? "opacity-100" : "opacity-0"}`} style={{ color: "var(--accent)" }}>Free to use</p>
+          <div className={`flex justify-center mb-4 transition-all duration-500 ${toolsVisible ? "opacity-100" : "opacity-0"}`}>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.2)" }}>Free to use</span>
+          </div>
           <h2 className={`text-center text-3xl md:text-4xl font-bold mb-4 transition-all duration-600 delay-75 ${toolsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`} style={{ color: "var(--foreground)", fontFamily: FONT }}>
             Hooks and a content plan before you open the app
           </h2>
@@ -454,8 +477,8 @@ export default function LandingPage() {
               </div>
             </Link>
             <Link href="/tools/content-factory" className={`group card-lift block rounded-2xl border overflow-hidden transition-all duration-600 ${toolsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`} style={{ background: "var(--surface-2)", borderColor: "var(--border)", transitionDelay: "200ms" }}>
-              <div className="px-7 pt-7 pb-5 border-b" style={{ borderColor: "var(--border)", background: "rgba(124,92,252,0.04)" }}>
-                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-4" style={{ background: "rgba(124,92,252,0.1)", border: "1px solid rgba(124,92,252,0.15)" }}>📅</div>
+              <div className="px-7 pt-7 pb-5 border-b" style={{ borderColor: "var(--border)", background: "rgba(255,78,80,0.04)" }}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-4" style={{ background: "var(--accent-glow)", border: "1px solid rgba(255,78,80,0.15)" }}>📅</div>
                 <div className="grid grid-cols-7 gap-1">
                   {Array.from({ length: 21 }).map((_, i) => (
                     <div key={i} className="h-6 rounded-md flex items-center justify-center font-bold" style={{
@@ -489,7 +512,7 @@ export default function LandingPage() {
           </h2>
           <div className="space-y-2">
             {faqs.map((item, i) => (
-              <div key={i} className={`rounded-xl border overflow-hidden transition-all duration-600 ${faqVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`} style={{ borderColor: "var(--border)", background: "var(--surface)", transitionDelay: `${50 * i}ms` }}>
+              <div key={i} className={`rounded-2xl border overflow-hidden transition-all duration-600 ${faqVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"}`} style={{ borderColor: "var(--border)", background: "var(--surface)", transitionDelay: `${50 * i}ms` }}>
                 <button
                   type="button"
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}

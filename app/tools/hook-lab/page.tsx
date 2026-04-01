@@ -101,13 +101,31 @@ export default function HookLabPage() {
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
       {/* Header Nav */}
-      <nav className="border-b sticky top-0 z-10 backdrop-blur-sm" style={{ borderColor: "var(--border)", background: "rgba(15,15,19,0.92)" }}>
-        <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group" title="Home">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{ background: "var(--accent)" }}>▶</div>
-            <span className="text-sm font-semibold" style={{ color: "var(--muted)" }}>ScriptForge</span>
-          </Link>
-          <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}>
+      <nav className="border-b sticky top-0 z-10 backdrop-blur-md" style={{ borderColor: "var(--border)", background: "rgba(250,249,246,0.92)", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-sm)" }}>
+        <div className="max-w-3xl mx-auto px-6 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2.5 group" title="Home">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, var(--accent) 0%, #FF7B35 100%)", boxShadow: "0 4px 12px rgba(255,78,80,0.3)" }}>✦</div>
+              <span className="text-sm font-bold tracking-tight" style={{ color: "var(--foreground)" }}>ScriptForge</span>
+            </Link>
+            <div className="hidden sm:flex items-center gap-2">
+              <Link
+                href="/tools/content-factory"
+                className="btn-press text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+              >
+                <span>📅</span> Content Calendar
+              </Link>
+              <Link
+                href="/writer"
+                className="btn-press text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+              >
+                <span>✦</span> Script Writer
+              </Link>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full" style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)", boxShadow: "var(--shadow-sm)" }}>
             <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: limitReached ? "var(--red)" : "var(--green)" }} />
             {limitReached ? "Daily limit reached" : `${remaining} / ${DAILY_LIMIT} free today`}
           </div>
@@ -117,7 +135,7 @@ export default function HookLabPage() {
       <main className="max-w-3xl mx-auto px-6 py-12">
         {/* Hero */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4 uppercase tracking-wider" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(124,92,252,0.25)" }}>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4 uppercase tracking-wider" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.2)" }}>
             Free Tool
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold mb-3" style={{ color: "var(--foreground)" }}>

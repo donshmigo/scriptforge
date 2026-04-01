@@ -669,13 +669,31 @@ ${bodyHtml}
       {/* Header */}
       <header className="border-b sticky top-0 z-10 backdrop-blur-md" style={{ borderColor: "var(--border)", background: "rgba(250,249,246,0.94)", boxShadow: "var(--shadow-sm)" }}>
         <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent) 0%, #FF7B35 100%)", boxShadow: "0 4px 12px rgba(255,78,80,0.35)" }}>✦</div>
-            <div>
-              <h1 className="text-base font-bold leading-none tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>ScriptForge</h1>
-              <p className="text-xs leading-none mt-0.5" style={{ color: "var(--muted)" }}>Script Generator</p>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2.5 group">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent) 0%, #FF7B35 100%)", boxShadow: "0 4px 12px rgba(255,78,80,0.35)" }}>✦</div>
+              <div>
+                <h1 className="text-base font-bold leading-none tracking-tight" style={{ color: "var(--foreground)", fontFamily: "var(--font-syne)" }}>ScriptForge</h1>
+                <p className="text-xs leading-none mt-0.5" style={{ color: "var(--muted)" }}>Script Generator</p>
+              </div>
+            </Link>
+            <div className="hidden sm:flex items-center gap-2">
+              <Link
+                href="/tools/hook-lab"
+                className="btn-press text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+              >
+                <span>⚡</span> Hook Lab
+              </Link>
+              <Link
+                href="/tools/content-factory"
+                className="btn-press text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+              >
+                <span>📅</span> Content Calendar
+              </Link>
             </div>
-          </Link>
+          </div>
           <div className="flex items-center gap-2.5">
             {script && (
               <button

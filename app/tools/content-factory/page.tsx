@@ -57,7 +57,7 @@ function TypeBadge({ type }: { type: string }) {
     <span
       className="inline-block px-2 py-0.5 rounded text-xs font-semibold"
       style={{
-        background: TYPE_COLORS[type] ?? "rgba(124,92,252,0.15)",
+        background: TYPE_COLORS[type] ?? "rgba(255,78,80,0.12)",
         color: TYPE_TEXT_COLORS[type] ?? "var(--accent)",
       }}
     >
@@ -145,25 +145,43 @@ export default function ContentFactoryPage() {
   return (
     <div className="min-h-screen" style={{ background: "var(--background)" }}>
       {/* Nav */}
-      <nav className="border-b sticky top-0 z-10 backdrop-blur-sm" style={{ borderColor: "var(--border)", background: "rgba(15,15,19,0.92)" }}>
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center text-sm" style={{ background: "var(--accent)" }}>▶</div>
-            <span className="text-sm font-semibold" style={{ color: "var(--muted)" }}>ScriptForge</span>
-          </Link>
+      <nav className="border-b sticky top-0 z-10 backdrop-blur-md" style={{ borderColor: "var(--border)", background: "rgba(250,249,246,0.92)", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-sm)" }}>
+        <div className="max-w-5xl mx-auto px-6 py-3.5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, var(--accent) 0%, #FF7B35 100%)", boxShadow: "0 4px 12px rgba(255,78,80,0.3)" }}>✦</div>
+              <span className="text-sm font-bold tracking-tight" style={{ color: "var(--foreground)" }}>ScriptForge</span>
+            </Link>
+            <div className="hidden sm:flex items-center gap-2">
+              <Link
+                href="/tools/hook-lab"
+                className="btn-press text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+              >
+                <span>⚡</span> Hook Lab
+              </Link>
+              <Link
+                href="/writer"
+                className="btn-press text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
+              >
+                <span>✦</span> Script Writer
+              </Link>
+            </div>
+          </div>
           {plan && (
             <div className="flex items-center gap-2">
               <button
                 onClick={handleDownloadCsv}
-                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+                className="btn-press text-xs font-medium px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
               >
                 ↓ Download CSV
               </button>
               <button
                 onClick={() => { setPlan(null); setError(""); setSelectedDay(null); }}
-                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}
+                className="btn-press text-xs font-medium px-3 py-1.5 rounded-lg"
+                style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
               >
                 ↺ New Plan
               </button>
@@ -177,7 +195,7 @@ export default function ContentFactoryPage() {
         {/* Hero (hidden after plan is generated) */}
         {!plan && (
           <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4 uppercase tracking-wider" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(124,92,252,0.25)" }}>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold mb-4 uppercase tracking-wider" style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.2)" }}>
               Free Tool
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold mb-3" style={{ color: "var(--foreground)" }}>
@@ -304,7 +322,7 @@ export default function ContentFactoryPage() {
                           className={`p-3 text-left transition-all hover:brightness-110 ${col < 4 ? "border-r" : ""}`}
                           style={{
                             borderColor: "var(--border)",
-                            background: isPreview ? "rgba(124,92,252,0.05)" : "var(--surface)",
+                            background: isPreview ? "rgba(255,78,80,0.05)" : "var(--surface)",
                           }}
                         >
                           <div className="flex items-start justify-between gap-1 mb-1.5">
@@ -318,7 +336,7 @@ export default function ContentFactoryPage() {
                           <div
                             className="text-xs font-semibold mb-1 px-1.5 py-0.5 rounded inline-block"
                             style={{
-                              background: TYPE_COLORS[dayData.type] ?? "rgba(124,92,252,0.15)",
+                              background: TYPE_COLORS[dayData.type] ?? "rgba(255,78,80,0.12)",
                               color: TYPE_TEXT_COLORS[dayData.type] ?? "var(--accent)",
                             }}
                           >
@@ -482,7 +500,7 @@ export default function ContentFactoryPage() {
                   <Link
                     href="/writer"
                     className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 rounded-lg text-xs font-semibold"
-                    style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(124,92,252,0.25)" }}
+                    style={{ background: "var(--accent-glow)", color: "var(--accent)", border: "1px solid rgba(255,78,80,0.2)" }}
                   >
                     <span>▶</span> Write this in ScriptForge
                   </Link>
