@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Logo } from "@/components/Logo";
 
 const FONT_DISPLAY = "var(--font-syne), system-ui, sans-serif";
 
@@ -94,27 +95,9 @@ function LoginForm() {
         }}
       >
         {/* Logo */}
-        <Link
-          href="/"
-          style={{
-            display: "block",
-            textAlign: "center",
-            marginBottom: "2.5rem",
-            textDecoration: "none",
-          }}
-        >
-          <span
-            style={{
-              fontFamily: FONT_DISPLAY,
-              fontSize: "1.5rem",
-              fontWeight: 800,
-              color: "var(--foreground)",
-              letterSpacing: "-0.03em",
-            }}
-          >
-            Script<span style={{ color: "var(--accent)" }}>Forge</span>
-          </span>
-        </Link>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "2.5rem" }}>
+          <Logo size="lg" />
+        </div>
 
         {/* Card */}
         <div

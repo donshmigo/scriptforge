@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 const FONT = "var(--font-syne), system-ui, sans-serif";
 
@@ -164,10 +165,7 @@ export default function LandingPage() {
         backdropFilter: "blur(12px)",
         boxShadow: "var(--shadow-sm)"
       }}>
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold" style={{ background: "linear-gradient(135deg, var(--accent) 0%, #FF7B35 100%)", color: "#fff", fontFamily: FONT }}>✦</div>
-          <span className="text-base font-bold tracking-tight" style={{ color: "var(--foreground)", fontFamily: FONT }}>ScriptForge</span>
-        </Link>
+        <Logo size="md" />
         <div className="flex items-center gap-5">
           <Link href="/tools/hook-lab" className="text-sm font-medium hidden sm:inline transition-opacity hover:opacity-60" style={{ color: "var(--muted)" }}>Hook Lab</Link>
           <Link href="/tools/content-factory" className="text-sm font-medium hidden sm:inline transition-opacity hover:opacity-60" style={{ color: "var(--muted)" }}>Content Planner</Link>
@@ -560,10 +558,7 @@ export default function LandingPage() {
       {/* ── Footer ──────────────────────────────────────────────────── */}
       <footer className="py-10 px-6 border-t" style={{ borderColor: "var(--border)" }}>
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold" style={{ background: "linear-gradient(135deg, var(--accent) 0%, #FF7B35 100%)", color: "#fff", fontFamily: FONT }}>✦</div>
-            <span className="font-bold" style={{ color: "var(--foreground)", fontFamily: FONT }}>ScriptForge</span>
-          </Link>
+          <Logo size="sm" />
           <p className="text-xs text-center" style={{ color: "var(--muted)" }}>Scripts that sound like you. Built for creators.</p>
           <div className="flex items-center gap-6">
             <Link href="/writer" className="text-sm hover:underline" style={{ color: "var(--muted)" }}>App</Link>
