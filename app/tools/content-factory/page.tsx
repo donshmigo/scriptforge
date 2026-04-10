@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 interface Script { [key: string]: string; }
 
@@ -148,10 +149,7 @@ export default function ContentFactoryPage() {
       <nav className="border-b sticky top-0 z-10 backdrop-blur-md" style={{ borderColor: "var(--border)", background: "rgba(250,249,246,0.92)", backdropFilter: "blur(12px)", boxShadow: "var(--shadow-sm)" }}>
         <div className="max-w-5xl mx-auto px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold text-white" style={{ background: "linear-gradient(135deg, var(--accent) 0%, #FF7B35 100%)", boxShadow: "0 4px 12px rgba(255,78,80,0.3)" }}>✦</div>
-              <span className="text-sm font-bold tracking-tight" style={{ color: "var(--foreground)" }}>ScriptForge</span>
-            </Link>
+            <Logo size="sm" />
             <div className="hidden sm:flex items-center gap-2">
               <Link
                 href="/tools/hook-lab"
