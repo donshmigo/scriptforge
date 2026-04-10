@@ -300,7 +300,6 @@ export default function EditProfileModal({
   }, [channelUrl, apiKey]);
 
   const handleAnalyze = useCallback(async () => {
-    if (!apiKey.trim()) { setStyleError("Add your API key first (API Key tab)."); return; }
     if (pendingScripts.length === 0) { setStyleError("Add scripts before analyzing."); return; }
     setAnalyzeLoading(true);
     setStyleError("");

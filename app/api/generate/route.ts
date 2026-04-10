@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
 
     if (!resolvedAnthropicKey && !resolvedOpenAiKey) {
       return NextResponse.json(
-        { error: "No API key configured. Add your Anthropic key in Edit Profile → API Keys." },
+        { error: "AI generation is not configured on the server. Please contact support." },
         { status: 400 }
       );
     }
@@ -468,7 +468,7 @@ Return the complete revised script now:`
       lower.includes("unauthorized")
     ) {
       return NextResponse.json(
-        { error: "Your API key is invalid or expired. Double-check it in Edit Profile → API Keys." },
+        { error: "Authentication error with the AI service. Please try again or contact support." },
         { status: 401 }
       );
     }
@@ -527,7 +527,7 @@ Return the complete revised script now:`
     // Permission / model access
     if (message.includes("403") || lower.includes("permission") || lower.includes("not allowed") || lower.includes("access denied")) {
       return NextResponse.json(
-        { error: "Your API key doesn't have access to the required model. Check your account plan at the provider's website." },
+        { error: "The AI service returned an access error. Please try again or contact support." },
         { status: 403 }
       );
     }
@@ -542,7 +542,7 @@ Return the complete revised script now:`
 
     // Fallback — don't expose raw SDK stack traces
     return NextResponse.json(
-      { error: "Something went wrong while generating your script. Please try again, and if it keeps happening, check your API key in Edit Profile." },
+      { error: "Something went wrong while generating your script. Please try again, and if it keeps happening, contact support." },
       { status: 500 }
     );
   }
