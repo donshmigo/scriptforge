@@ -139,7 +139,7 @@ export default function LandingPage() {
     },
     {
       q: "Do I need to pay?",
-      a: "You use your own OpenAI or Anthropic API key. ScriptForge doesn't store it or charge a subscription. The app and free tools run in your browser and hit the APIs you configure.",
+      a: "ScriptForge handles the AI infrastructure — no API key required. Sign up, set up your profile, and start generating scripts. The free tools (Hook Lab, Content Planner) have no limits.",
     },
     {
       q: "What are \u201cwriting styles\u201d?",
@@ -214,7 +214,7 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className={`text-xs transition-all duration-500 delay-300 ${heroVisible ? "opacity-50" : "opacity-0"}`} style={{ color: "var(--muted)" }}>
-              Your API key stays in your browser. We don&apos;t store it.
+              No API key needed. Just sign up and start generating.
             </p>
           </div>
 
@@ -545,7 +545,7 @@ export default function LandingPage() {
             <div className="text-3xl mb-4" style={{ fontFamily: FONT, color: "var(--accent)" }}>✦</div>
             <h2 className="text-2xl md:text-3xl font-bold mb-3" style={{ color: "var(--foreground)", fontFamily: FONT }}>Get your first script in under a minute</h2>
             <p className="text-base mb-8 max-w-md mx-auto" style={{ color: "var(--muted)" }}>
-              Open the app, pick a style, add your topic. No credit card, no account — just your API key in your browser.
+              Open the app, pick a style, add your topic. No credit card required — first script in under a minute.
             </p>
             <Link href="/writer" className="btn-press inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-base font-bold" style={{ background: "linear-gradient(135deg, var(--accent) 0%, #FF7B35 100%)", color: "#fff", boxShadow: "var(--shadow-accent)", fontFamily: FONT }}>
               Open ScriptForge
